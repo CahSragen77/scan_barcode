@@ -258,66 +258,83 @@
             reader.readAsArrayBuffer(file);
         });
 
-        // --- 2. FITUR SCANNER KAMERA ---
-        // --- 2. FITUR SCANNER KAMERA OPTIMAL UNTUK HP & LAPTOP ---
+        // --- 2. FITUR SCANNER KAMERA KOMPATIBILITAS MAKSIMAL (FIX HP & LAPTOP) ---
         let html5QrcodeInstance = null;
 
         function startScanner() {
-            // Bersihkan instance lama jika ada
+            // Jika instance lama masih ada atau aktif, hentikan dulu
             if (html5QrcodeInstance) {
                 html5QrcodeInstance.stop().catch(() => {});
             }
 
-            // Buat instance baru langsung ke elemen 'reader'
+            // Inisialisasi ulang ke elemen 'reader'
             html5QrcodeInstance = new Html5Qrcode("reader");
 
+            // Konfigurasi dibuat super ringan agar browser HP tidak menolak
             const config = {
-                fps: 15,
-                qrbox: function(viewfinderWidth, viewfinderHeight) {
-                    // Membuat kotak bidik adaptif (lebar untuk barcode fisik)
-                    const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-                    return {
-                        width: Math.floor(viewfinderWidth * 0.85),
-                        height: Math.floor(viewfinderHeight * 0.45)
-                    };
-                }
+                fps: 10,
+                qrbox: { width: 250, height: 150 } // Menggunakan ukuran statis (paling aman untuk semua browser)
             };
 
-            // Coba jalankan langsung menggunakan kamera belakang (environment)
+            // LANGKAH A: Coba minta daftar kamera yang tersedia di perangkat dahulu
+            Html5Qrcode.getCameras().then(devices => {
+                if (devices && devices.length > 0) {
+                    // Cari apakah ada kamera belakang (back / rear / environment)
+                    let targetCameraId = devices[0].id; // Default pakai kamera pertama yang ditemukan
+                    
+                    for (let i = 0; i < devices.length; i++) {
+                        const label = devices[i].label.toLowerCase();
+                        if (label.includes('back') || label.includes('rear') || label.includes('belakang') || label.includes('environment')) {
+                            targetCameraId = devices[i].id;
+                            break; // Prioritaskan kamera belakang untuk HP
+                        }
+                    }
+
+                    // Jalankan kamera berdasarkan ID yang sudah divalidasi sistem
+                    html5QrcodeInstance.start(
+                        targetCameraId, 
+                        config,
+                        onScanSuccess,
+                        onScanFailure
+                    ).catch(err => {
+                        console.error("Gagal start kamera spesifik:", err);
+                        fallbackDefaultCamera(config);
+                    });
+                } else {
+                    // Jika devices kosong, gunakan opsi default universal
+                    fallbackDefaultCamera(config);
+                }
+            }).catch(err => {
+                console.error("Gagal mendeteksi daftar kamera:", err);
+                fallbackDefaultCamera(config);
+            });
+        }
+
+        // Jalur Cadangan Universal jika deteksi ID kamera gagal
+        function fallbackDefaultCamera(config) {
             html5QrcodeInstance.start(
                 { facingMode: "environment" }, 
                 config,
                 onScanSuccess,
                 onScanFailure
             ).catch(err => {
-                console.log("Gagal kamera belakang, mencoba kamera default...", err);
-                // Jika gagal (seperti di laptop yang tidak punya kamera belakang), gunakan kamera default yang tersedia
-                html5QrcodeInstance.start(
-                    { cameraId: undefined },
-                    config,
-                    onScanSuccess,
-                    onScanFailure
-                ).catch(err2 => {
-                    document.getElementById('reader').innerHTML = `
-                        <div class="text-center p-4 text-xs text-red-500">
-                            Gagal mengaktifkan kamera: ${err2.message}<br>
-                            Silakan gunakan input manual di bawah.
-                        </div>
-                    `;
-                });
+                document.getElementById('reader').innerHTML = `
+                    <div class="text-center p-4 text-xs text-red-500 font-medium">
+                        Gagal mengaktifkan kamera: ${err.message || 'Izin Diblokir/Digunakan Aplikasi Lain'}<br>
+                        Silakan gunakan input manual di bawah.
+                    </div>
+                `;
             });
         }
 
         function onScanSuccess(decodedText) {
             handleProductLookup(decodedText);
-            // Memberikan efek getar pendek di HP jika berhasil scan
             if (navigator.vibrate) navigator.vibrate(100); 
         }
 
         function onScanFailure(error) {
-            // Abaikan error pembacaan frame per frame agar kamera tidak macet
+            // Dibiarkan kosong agar frame scanning terus berjalan lancar
         }
-
         // --- 3. LOGIKA LOOKUP / PENCARIAN PRODUK ---
         function handleProductLookup(barcodeOrPlu) {
             const searchKey = String(barcodeOrPlu).trim().toLowerCase();
