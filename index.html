@@ -8,6 +8,21 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
 </head>
+
+<style>
+        #reader {
+            width: 100% !important;
+            border: none !important;
+            background: #111827;
+            position: relative;
+        }
+        #reader video {
+            width: 100% !important;
+            height: auto !important;
+            object-fit: cover !important;
+            border-radius: 0.75rem;
+        }
+    </style>
 <body class="bg-gray-50 font-sans min-h-screen text-gray-800">
 
     <div class="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
@@ -244,23 +259,63 @@
         });
 
         // --- 2. FITUR SCANNER KAMERA ---
+        // --- 2. FITUR SCANNER KAMERA OPTIMAL UNTUK HP & LAPTOP ---
+        let html5QrcodeInstance = null;
+
         function startScanner() {
-            html5QrcodeScanner = new Html5QrcodeScanner("reader", { 
-                fps: 12, 
-                qrbox: { width: 260, height: 140 }, 
-                rememberLastUsedCamera: true,
-                supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
+            // Bersihkan instance lama jika ada
+            if (html5QrcodeInstance) {
+                html5QrcodeInstance.stop().catch(() => {});
+            }
+
+            // Buat instance baru langsung ke elemen 'reader'
+            html5QrcodeInstance = new Html5Qrcode("reader");
+
+            const config = {
+                fps: 15,
+                qrbox: function(viewfinderWidth, viewfinderHeight) {
+                    // Membuat kotak bidik adaptif (lebar untuk barcode fisik)
+                    const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+                    return {
+                        width: Math.floor(viewfinderWidth * 0.85),
+                        height: Math.floor(viewfinderHeight * 0.45)
+                    };
+                }
+            };
+
+            // Coba jalankan langsung menggunakan kamera belakang (environment)
+            html5QrcodeInstance.start(
+                { facingMode: "environment" }, 
+                config,
+                onScanSuccess,
+                onScanFailure
+            ).catch(err => {
+                console.log("Gagal kamera belakang, mencoba kamera default...", err);
+                // Jika gagal (seperti di laptop yang tidak punya kamera belakang), gunakan kamera default yang tersedia
+                html5QrcodeInstance.start(
+                    { cameraId: undefined },
+                    config,
+                    onScanSuccess,
+                    onScanFailure
+                ).catch(err2 => {
+                    document.getElementById('reader').innerHTML = `
+                        <div class="text-center p-4 text-xs text-red-500">
+                            Gagal mengaktifkan kamera: ${err2.message}<br>
+                            Silakan gunakan input manual di bawah.
+                        </div>
+                    `;
+                });
             });
-            html5QrcodeScanner.render(onScanSuccess, onScanFailure);
         }
 
         function onScanSuccess(decodedText) {
             handleProductLookup(decodedText);
+            // Memberikan efek getar pendek di HP jika berhasil scan
             if (navigator.vibrate) navigator.vibrate(100); 
         }
 
         function onScanFailure(error) {
-            // Mengabaikan error frame scanning agar kelancaran kamera terjaga
+            // Abaikan error pembacaan frame per frame agar kamera tidak macet
         }
 
         // --- 3. LOGIKA LOOKUP / PENCARIAN PRODUK ---
