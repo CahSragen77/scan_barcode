@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Data Entry Retur Barang</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+</head>
+<body class="bg-gray-50 font-sans min-h-screen text-gray-800">
+
+    <div class="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
+        
+        <header class="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+            <div>
+                <h1 class="text-2xl font-bold text-indigo-700">ReturEntry Pro 🚀</h1>
+                <p class="text-sm text-gray-500">Aplikasi Pembantu Data Entry & Scanning Retur Supplier</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="text-xs font-semibold px-3 py-1 rounded-full bg-gray-100 text-gray-600">
+                    Status: <span id="app-status" class="text-red-500">Belum Ada Master Data</span>
+                </span>
+                <button id="btn-clear-all" class="hidden bg-red-50 hover:bg-red-100 text-red-600 px-4 py-2 rounded-xl text-xs font-bold transition">
+                    Reset Semua Data
+                </button>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <div class="lg:col-span-1 flex flex-col gap-6">
+                
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
+                    <h2 class="text-md font-bold mb-3 flex items-center gap-2 text-gray-700">
+                        <span class="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-600">1</span>
+                        Upload Master Data Produk
+                    </h2>
+                    <input type="file" id="excel-file" accept=".xlsx, .xls, .csv" 
+                        class="block w-full text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer"/>
+                    <p id="status-master-load" class="text-xs text-green-600 font-medium mt-2 hidden">✓ <span id="total-items">0</span> produk termuat.</p>
+                </div>
+
+                <div id="interaction-section" class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 opacity-40 pointer-events-none transition-all">
+                    <h2 class="text-md font-bold mb-3 flex items-center gap-2 text-gray-700">
+                        <span class="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-600">2</span>
+                        Scan / Cari Produk
+                    </h2>
+                    
+                    <div class="overflow-hidden rounded-xl bg-gray-900 mb-4 aspect-video flex items-center justify-center border border-gray-300">
+                        <div id="reader" class="w-full"></div>
+                    </div>
+
+                    <div class="flex gap-2">
+                        <input type="text" id="manual-barcode" placeholder="Masukkan Barcode / PLU..." 
+                            class="flex-1 px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs">
+                        <button id="btn-lookup" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-medium transition">
+                            Cari
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="lg:col-span-2 flex flex-col gap-6">
+                
+                <div id="entry-form-section" class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 hidden">
+                    <h2 class="text-md font-bold mb-4 text-indigo-600 flex items-center gap-2">
+                        📥 Form Input Data Retur
+                    </h2>
+                    
+                    <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-4 grid grid-cols-2 gap-3 text-xs">
+                        <div>
+                            <span class="text-gray-400 block">Deskripsi Produk:</span>
+                            <span id="entry-descp" class="font-bold text-sm text-gray-900">-</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-400 block">Kode PLU:</span>
+                            <span id="entry-plu" class="font-mono font-bold text-sm text-gray-900">-</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-400 block">Barcode:</span>
+                            <span id="entry-barcode" class="font-mono text-gray-600">-</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-400 block">Kategori / Harga:</span>
+                            <span id="entry-info" class="text-gray-600">-</span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">Jumlah Qty Retur <span class="text-red-500">*</span></label>
+                            <input type="number" id="retur-qty" min="1" placeholder="Contoh: 10"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">Tanggal Kedaluwarsa (Expired) <span class="text-red-500">*</span></label>
+                            <input type="date" id="retur-exp" 
+                                class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end gap-2">
+                        <button id="btn-cancel-entry" class="px-4 py-2 text-xs font-semibold text-gray-500 hover:text-gray-700">Batal</button>
+                        <button id="btn-save-entry" class="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-xl text-xs font-bold transition">
+                            Tambahkan ke Daftar Retur
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 flex-1 flex flex-col">
+                    <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
+                        <div>
+                            <h2 class="text-md font-bold text-gray-700">Daftar Item Siap Retur</h2>
+                            <p class="text-xs text-gray-400">Data di bawah ini akan di-export ke laporan Excel.</p>
+                        </div>
+                        <button id="btn-export" class="hidden bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5">
+                            📊 Export ke Excel (.xlsx)
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto border border-gray-100 rounded-xl flex-1 min-h-[200px]">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-gray-50 text-gray-500 border-b border-gray-100">
+                                    <th class="p-3 font-semibold">PLU</th>
+                                    <th class="p-3 font-semibold">Barcode</th>
+                                    <th class="p-3 font-semibold">Deskripsi Produk</th>
+                                    <th class="p-3 font-semibold text-center">Qty Retur</th>
+                                    <th class="p-3 font-semibold">Tgl Expired</th>
+                                    <th class="p-3 font-semibold text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="retur-table-body">
+                                <tr>
+                                    <td colspan="6" class="p-8 text-center text-gray-400 italic">Belum ada item yang ditambahkan. Silakan unggah master data lalu scan barcode produk.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let masterData = []; // Menyimpan file excel produk yang diupload
+        let returList = [];  // Menyimpan data entry retur sementara
+        let currentActiveProduct = null;
+        let html5QrcodeScanner = null;
+
+        // Elemen-elemen DOM
+        const excelInput = document.getElementById('excel-file');
+        const statusMasterLoad = document.getElementById('status-master-load');
+        const totalItems = document.getElementById('total-items');
+        const interactionSection = document.getElementById('interaction-section');
+        const appStatus = document.getElementById('app-status');
+        const btnClearAll = document.getElementById('btn-clear-all');
+        const manualBarcode = document.getElementById('manual-barcode');
+        const btnLookup = document.getElementById('btn-lookup');
+        
+        // Form Data Entry Elemen
+        const entryFormSection = document.getElementById('entry-form-section');
+        const entryDescp = document.getElementById('entry-descp');
+        const entryPlu = document.getElementById('entry-plu');
+        const entryBarcode = document.getElementById('entry-barcode');
+        const entryInfo = document.getElementById('entry-info');
+        const returQty = document.getElementById('retur-qty');
+        const returExp = document.getElementById('retur-exp');
+        const btnSaveEntry = document.getElementById('btn-save-entry');
+        const btnCancelEntry = document.getElementById('btn-cancel-entry');
+
+        // Tabel & Export Elemen
+        const returTableBody = document.getElementById('retur-table-body');
+        const btnExport = document.getElementById('btn-export');
+
+        // --- 1. PROSES BACA EXCEL MASTER DATA (SUDAH DIOPTIMALKAN) ---
+        excelInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    
+                    // Ambil data mentah dari Excel
+                    const rawData = XLSX.utils.sheet_to_json(worksheet);
+
+                    if(rawData.length === 0) {
+                        alert('File Excel kosong!');
+                        return;
+                    }
+
+                    // Standarisasi Nama Kolom (Kebal Huruf Besar/Kecil)
+                    masterData = rawData.map(row => {
+                        const normalizedRow = {};
+                        // Cari kunci kolom secara fleksibel
+                        for (let key in row) {
+                            const lowerKey = key.trim().toLowerCase();
+                            if (lowerKey === 'plu' || lowerKey === 'kode plu' || lowerKey === 'kode_plu') {
+                                normalizedRow.plu = row[key];
+                            } else if (lowerKey === 'barcode' || lowerKey === 'no_barcode' || lowerKey === 'no barcode') {
+                                normalizedRow.barcode = row[key];
+                            } else if (lowerKey === 'descp' || lowerKey === 'deskripsi' || lowerKey === 'nama barang' || lowerKey === 'nama_barang') {
+                                normalizedRow.descp = row[key];
+                            } else if (lowerKey === 'price1' || lowerKey === 'harga' || lowerKey === 'price') {
+                                normalizedRow.price1 = row[key];
+                            } else if (lowerKey === 'kategori' || lowerKey === 'category') {
+                                normalizedRow.kategori = row[key];
+                            }
+                        }
+                        return normalizedRow;
+                    });
+
+                    // Pastikan minimal ada kolom barcode atau plu yang berhasil terbaca
+                    if(masterData.length > 0 && (masterData[0].barcode || masterData[0].plu)) {
+                        totalItems.innerText = masterData.length;
+                        statusMasterLoad.classList.remove('hidden');
+                        interactionSection.classList.remove('opacity-40', 'pointer-events-none');
+                        excelInput.disabled = true;
+                        
+                        appStatus.innerText = "Dashboard Siap Entry";
+                        appStatus.className = "text-green-600 font-bold";
+                        btnClearAll.classList.remove('hidden');
+                        
+                        // Aktifkan Kamera Scanner Laptop/HP
+                        startScanner();
+                    } else {
+                        alert('Gagal memetakan data. Pastikan file Excel Anda memiliki judul kolom seperti: "PLU", "Barcode", dan "Deskripsi" / "Descp" di baris pertama.');
+                    }
+
+                } catch (error) {
+                    console.error(error);
+                    alert('Terjadi kesalahan saat membaca file Excel: ' + error.message);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        // --- 2. FITUR SCANNER KAMERA ---
+        function startScanner() {
+            html5QrcodeScanner = new Html5QrcodeScanner("reader", { 
+                fps: 12, 
+                qrbox: { width: 260, height: 140 }, 
+                rememberLastUsedCamera: true,
+                supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
+            });
+            html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+        }
+
+        function onScanSuccess(decodedText) {
+            handleProductLookup(decodedText);
+            if (navigator.vibrate) navigator.vibrate(100); 
+        }
+
+        function onScanFailure(error) {
+            // Mengabaikan error frame scanning agar kelancaran kamera terjaga
+        }
+
+        // --- 3. LOGIKA LOOKUP / PENCARIAN PRODUK ---
+        function handleProductLookup(barcodeOrPlu) {
+            const searchKey = String(barcodeOrPlu).trim().toLowerCase();
+            
+            const product = masterData.find(item => {
+                const itemBarcode = item.barcode ? String(item.barcode).trim().toLowerCase() : '';
+                const itemPlu = item.plu ? String(item.plu).trim().toLowerCase() : '';
+                return itemBarcode === searchKey || itemPlu === searchKey;
+            });
+
+            if(product) {
+                currentActiveProduct = product;
+                
+                entryFormSection.classList.remove('hidden');
+                entryDescp.innerText = product.descp || 'Tanpa Deskripsi';
+                entryPlu.innerText = product.plu || '-';
+                entryBarcode.innerText = product.barcode || '-';
+                
+                const harga = !isNaN(product.price1) ? 'Rp ' + Number(product.price1).toLocaleString('id-ID') : (product.price1 || '0');
+                entryInfo.innerText = `${product.kategori || 'Umum'} / ${harga}`;
+                
+                returQty.value = '';
+                returExp.value = '';
+                returQty.focus();
+                
+                entryFormSection.scrollIntoView({ behavior: 'smooth' });
+            } else {
+                alert(`Produk dengan Barcode/PLU "${barcodeOrPlu}" tidak ditemukan dalam Master Data.`);
+            }
+        }
+
+        btnLookup.addEventListener('click', () => {
+            if(manualBarcode.value.trim() !== "") handleProductLookup(manualBarcode.value);
+        });
+        manualBarcode.addEventListener('keypress', (e) => {
+            if(e.key === 'Enter' && manualBarcode.value.trim() !== "") handleProductLookup(manualBarcode.value);
+        });
+
+        btnCancelEntry.addEventListener('click', () => {
+            entryFormSection.classList.add('hidden');
+            currentActiveProduct = null;
+        });
+
+        // --- 4. DATA ENTRY: SIMPAN ITEM KE DAFTAR KERJA ---
+        btnSaveEntry.addEventListener('click', () => {
+            const qty = parseInt(returQty.value);
+            const expiredDate = returExp.value;
+
+            if(!qty || qty <= 0) {
+                alert('Silakan isi jumlah Qty retur dengan benar (Minimal 1).');
+                returQty.focus();
+                return;
+            }
+            if(!expiredDate) {
+                alert('Silakan masukkan tanggal kedaluwarsa produk.');
+                returExp.focus();
+                return;
+            }
+
+            const returItem = {
+                plu: currentActiveProduct.plu,
+                barcode: currentActiveProduct.barcode,
+                descp: currentActiveProduct.descp,
+                qty_retur: qty,
+                tgl_expired: expiredDate
+            };
+
+            returList.push(returItem);
+            renderReturTable();
+
+            entryFormSection.classList.add('hidden');
+            manualBarcode.value = '';
+            currentActiveProduct = null;
+        });
+
+        function renderReturTable() {
+            if(returList.length === 0) {
+                returTableBody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="p-8 text-center text-gray-400 italic">Belum ada item yang ditambahkan. Silakan unggah master data lalu scan barcode produk.</td>
+                    </tr>
+                `;
+                btnExport.classList.add('hidden');
+                return;
+            }
+
+            btnExport.classList.remove('hidden');
+            returTableBody.innerHTML = '';
+
+            returList.forEach((item, index) => {
+                const tr = document.createElement('tr');
+                tr.className = "border-b border-gray-100 hover:bg-gray-50 transition";
+                tr.innerHTML = `
+                    <td class="p-3 font-mono text-gray-700">${item.plu || '-'}</td>
+                    <td class="p-3 font-mono text-gray-600">${item.barcode || '-'}</td>
+                    <td class="p-3 font-medium text-gray-900">${item.descp || '-'}</td>
+                    <td class="p-3 text-center font-bold text-indigo-600 text-sm">${item.qty_retur}</td>
+                    <td class="p-3 text-gray-600">${item.tgl_expired}</td>
+                    <td class="p-3 text-center">
+                        <button onclick="deleteReturItem(${index})" class="text-red-500 hover:text-red-700 font-semibold cursor-pointer">Hapus</button>
+                    </td>
+                `;
+                returTableBody.appendChild(tr);
+            });
+        }
+
+        function deleteReturItem(index) {
+            returList.splice(index, 1);
+            renderReturTable();
+        }
+
+        // --- 5. EXPORT DAFTAR RETUR MENJADI FILE EXCEL ---
+        btnExport.addEventListener('click', () => {
+            if(returList.length === 0) return;
+
+            const dataToExport = returList.map((item, idx) => ({
+                "No": idx + 1,
+                "Kode PLU": item.plu,
+                "Barcode": item.barcode,
+                "Deskripsi Produk": item.descp,
+                "Qty Retur": item.qty_retur,
+                "Tanggal Kedaluwarsa (Expired)": item.tgl_expired
+            }));
+
+            const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Laporan Retur Supplier");
+
+            const max_width = dataToExport.reduce((w, r) => Math.max(w, String(r["Deskripsi Produk"]).length), 20);
+            worksheet["!cols"] = [
+                { wch: 5 }, { wch: 12 }, { wch: 18 }, { wch: max_width }, { wch: 12 }, { wch: 25 }
+            ];
+
+            const tanggalHariIni = new Date().toISOString().split('T')[0];
+            const namaFile = `Laporan_Kerja_Retur_${tanggalHariIni}.xlsx`;
+
+            XLSX.writeFile(workbook, namaFile);
+        });
+
+        // --- 6. RESET TOTAL (CLEAR DATA) ---
+        btnClearAll.addEventListener('click', () => {
+            if(confirm('Apakah Anda yakin ingin menghapus semua data entry dan mereset aplikasi dari awal?')) {
+                if (html5QrcodeScanner) {
+                    html5QrcodeScanner.clear().catch(err => console.log(err));
+                }
+                
+                masterData = [];
+                returList = [];
+                currentActiveProduct = null;
+                excelInput.value = '';
+                excelInput.disabled = false;
+                manualBarcode.value = '';
+                
+                statusMasterLoad.classList.add('hidden');
+                entryFormSection.classList.add('hidden');
+                btnClearAll.classList.add('hidden');
+                
+                appStatus.innerText = "Belum Ada Master Data";
+                appStatus.className = "text-red-500 font-bold";
+                
+                renderReturTable();
+            }
+        });
+    </script>
+    
+    
+</body>
+</html>
