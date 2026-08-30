@@ -1,505 +1,2290 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Data Entry Retur Barang</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>TOKO LARIS - POS v3.0 (Offline)</title>
+    
+    <!-- Vue.js -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.7.14/dist/vue.js"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    <!-- Library Excel -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://unpkg.com/html5-qrcode"></script>
-</head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
+    <!-- JsBarcode -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/JsBarcode/3.11.6/JsBarcode.all.min.js"></script>
+    
+    <!-- QR/Barcode Scanner -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    
+    <style>
+        /* ===== RESET & BASE ===== */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background: #f0f4f8;
+            color: #1a202c;
+            min-height: 100vh;
+        }
+        .container { max-width: 1440px; margin: 0 auto; padding: 16px; }
 
-<style>
-        #reader {
-            width: 100% !important;
-            border: none !important;
-            background: #111827;
+        /* ===== LOGIN ===== */
+        .login-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, #1a365d, #2a4a7f);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        .login-box {
+            background: white;
+            padding: 40px;
+            border-radius: 24px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .login-box h1 { text-align: center; margin-bottom: 4px; color: #1a365d; }
+        .login-box .sub { text-align: center; color: #718096; margin-bottom: 24px; font-size: 14px; }
+        .login-box .form-group { margin-bottom: 16px; }
+        .login-box label { font-weight: 600; font-size: 13px; color: #4a5568; display: block; margin-bottom: 4px; }
+        .login-box input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 14px;
+        }
+        .login-box input:focus { outline: none; border-color: #3182ce; box-shadow: 0 0 0 3px rgba(49,130,206,0.1); }
+        .login-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #2b6cb0, #3182ce);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 16px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .login-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(49,130,206,0.3); }
+        .login-error { color: #e53e3e; font-size: 13px; text-align: center; margin-top: 10px; }
+
+        /* ===== HEADER ===== */
+        .header {
+            background: linear-gradient(135deg, #1a365d, #2a4a7f);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 16px;
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .header h1 { font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+        .header h1 i { color: #fbd38d; }
+        .header-info { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .header-info .badge-status {
+            padding: 4px 12px;
+            border-radius: 30px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .badge-status.online { background: #38a169; color: white; }
+        .badge-status.offline { background: #e53e3e; color: white; }
+        .badge-status.sync { background: #dd6b20; color: white; animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: 0.5; } }
+
+        .header-info .user-badge {
+            background: rgba(255,255,255,0.15);
+            padding: 4px 14px;
+            border-radius: 30px;
+            font-size: 12px;
+        }
+
+        /* ===== BUTTONS ===== */
+        .btn {
+            padding: 6px 14px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .btn-white { background: white; color: #1a365d; }
+        .btn-white:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .btn-success { background: #38a169; color: white; }
+        .btn-success:hover { background: #2f855a; transform: translateY(-2px); }
+        .btn-danger { background: #e53e3e; color: white; }
+        .btn-danger:hover { background: #c53030; transform: translateY(-2px); }
+        .btn-primary { background: #3182ce; color: white; }
+        .btn-primary:hover { background: #2b6cb0; transform: translateY(-2px); }
+        .btn-warning { background: #dd6b20; color: white; }
+        .btn-warning:hover { background: #c05621; transform: translateY(-2px); }
+        .btn-purple { background: #805ad5; color: white; }
+        .btn-purple:hover { background: #6b46c1; transform: translateY(-2px); }
+        .btn-outline { background: transparent; border: 2px solid white; color: white; }
+        .btn-outline:hover { background: rgba(255,255,255,0.1); }
+        .btn-sm { padding: 4px 10px; font-size: 11px; }
+
+        /* ===== TABS ===== */
+        .tabs {
+            display: flex;
+            gap: 3px;
+            background: #e2e8f0;
+            border-radius: 12px;
+            padding: 4px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+        .tab {
+            padding: 8px 14px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 12px;
+            cursor: pointer;
+            transition: 0.2s;
+            background: transparent;
+            color: #4a5568;
+            flex: 1;
+            text-align: center;
+            min-width: 70px;
+        }
+        .tab.active { background: white; color: #1a365d; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .tab:hover:not(.active) { background: rgba(255,255,255,0.3); }
+        .tab i { margin-right: 4px; }
+
+        /* ===== GRID ===== */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+        @media (max-width: 1024px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
+        /* ===== CARD ===== */
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 16px 18px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            margin-bottom: 14px;
+        }
+        .card h3 { font-size: 15px; font-weight: 700; margin-bottom: 10px; color: #2d3748; display: flex; align-items: center; gap: 8px; }
+        .card h3 i { color: #3182ce; }
+
+        /* ===== STATS ===== */
+        .stat-card {
+            background: white;
+            border-radius: 16px;
+            padding: 14px 18px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .stat-card .number { font-size: 26px; font-weight: 900; color: #1a365d; }
+        .stat-card .label { font-size: 12px; color: #718096; }
+        .stat-card .icon { font-size: 22px; margin-bottom: 4px; }
+        .dashboard-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        /* ===== FORM ===== */
+        .form-group { margin-bottom: 10px; }
+        .form-group label { display: block; font-weight: 600; font-size: 12px; color: #4a5568; margin-bottom: 3px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        @media (max-width: 500px) { .form-row { grid-template-columns: 1fr; } }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 14px;
+            transition: 0.2s;
+            background: #f7fafc;
+        }
+        input:focus, select:focus { outline: none; border-color: #3182ce; box-shadow: 0 0 0 3px rgba(49,130,206,0.1); background: white; }
+        input:disabled { background: #edf2f7; color: #4a5568; }
+
+        .btn-add {
+            width: 100%;
+            padding: 10px;
+            background: linear-gradient(135deg, #2b6cb0, #3182ce);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-top: 4px;
+        }
+        .btn-add:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(49,130,206,0.3); }
+
+        /* ===== TABLE ===== */
+        .table-wrap { overflow-x: auto; margin-top: 6px; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th {
+            text-align: left;
+            padding: 5px 5px;
+            border-bottom: 2px solid #e2e8f0;
+            color: #4a5568;
+            font-weight: 700;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        td { padding: 5px 5px; border-bottom: 1px solid #edf2f7; vertical-align: middle; }
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        .badge {
+            background: #edf2f7;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 10px;
+        }
+        .badge-blue { background: #bee3f8; color: #2a69ac; }
+        .badge-green { background: #c6f6d5; color: #276749; }
+        .badge-yellow { background: #fefcbf; color: #975a16; }
+        .badge-red { background: #fed7d7; color: #9b2c2c; }
+        .btn-delete {
+            background: none;
+            border: none;
+            color: #e53e3e;
+            cursor: pointer;
+            padding: 2px 6px;
+            border-radius: 6px;
+            transition: 0.2s;
+        }
+        .btn-delete:hover { background: #fed7d7; }
+        .total-row td { font-weight: 700; font-size: 13px; border-top: 2px solid #2d3748; padding-top: 8px; }
+        .empty-state { text-align: center; color: #a0aec0; padding: 16px 0; font-style: italic; font-size: 13px; }
+
+        /* ===== SCANNER ===== */
+        #scanner-container {
+            width: 100%;
+            max-width: 350px;
+            margin: 0 auto;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #1a202c;
             position: relative;
         }
-        #reader video {
-            width: 100% !important;
-            height: auto !important;
-            object-fit: cover !important;
-            border-radius: 0.75rem;
+        #scanner-container video { width: 100%; display: block; }
+        .scanner-overlay {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 160px; height: 160px;
+            border: 3px solid #48bb78;
+            border-radius: 12px;
+            box-shadow: 0 0 0 4000px rgba(0,0,0,0.3);
+            pointer-events: none;
+        }
+        .scanner-line {
+            position: absolute;
+            top: 50%; left: 10%;
+            width: 80%; height: 2px;
+            background: #48bb78;
+            animation: scanLine 2s linear infinite;
+            box-shadow: 0 0 20px #48bb78;
+        }
+        @keyframes scanLine { 0% { top: 20%; } 50% { top: 80%; } 100% { top: 20%; } }
+
+        /* ===== PRODUCT INFO ===== */
+        .product-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px 12px;
+            background: #f7fafc;
+            padding: 10px 14px;
+            border-radius: 12px;
+            margin-top: 8px;
+        }
+        .product-info .label { font-weight: 600; color: #4a5568; font-size: 11px; }
+        .product-info .value { font-weight: 700; color: #1a202c; font-size: 13px; }
+        .product-info .value.price { color: #38a169; font-size: 16px; }
+
+        /* ===== PRICETAG ===== */
+        .pricetag-preview {
+            background: white;
+            border: 2px dashed #a0aec0;
+            border-radius: 4px;
+            padding: 0;
+            margin: 0 auto;
+            display: inline-block;
+            position: relative;
+        }
+        .pricetag-preview .tag-content {
+            padding: 0;
+            position: relative;
+            font-family: 'Courier New', monospace;
+        }
+        
+        /* Ukuran pricetag dalam mm (1mm = 3.78px pada 96dpi) */
+        .pricetag-preview.panjang { width: 242px; }  /* 64mm = 242px */
+        .pricetag-preview.pendek { width: 148px; }   /* 39mm = 148px */
+        
+        .pricetag-preview.panjang .tag-content { height: 132px; }  /* 35mm = 132px */
+        .pricetag-preview.pendek .tag-content { height: 132px; }   /* 35mm = 132px */
+
+        /* Urutan baru: nama+harga -> barcode -> baris rak -> garis biru (PLU)
+           -> jarak 1mm -> garis merah (retur | tanggal) -> jarak 1.5mm -> border */
+        .tag-content { display: flex; flex-direction: column; }
+
+        .tag-body {
+            padding: 2px 4px 0;
+            text-align: center;
+            background: white;
+            flex: 1;
+        }
+        .tag-body .harga {
+            font-size: 20px;
+            font-weight: 900;
+            color: #000;
+            white-space: nowrap;
+        }
+        .tag-body .harga .satuan {
+            font-size: 0.55em;
+            font-weight: 700;
+        }
+        .tag-body .nama {
+            font-size: 9px;
+            font-weight: 600;
+            color: #000;
+        }
+        .tag-panjang .tag-body .harga { font-size: 20px; }
+        .tag-panjang .tag-body .nama { font-size: 9px; }
+        .tag-pendek .tag-body .harga { font-size: 15px; }
+        .tag-pendek .tag-body .nama { font-size: 7px; }
+
+        .tag-barcode {
+            padding: 2px 4px 0;
+            background: white;
+            text-align: center;
+        }
+        .tag-barcode svg { max-width: 100%; height: auto; }
+
+        .tag-rak-row {
+            padding: 1px 4px 0;
+            text-align: right;
+            font-size: 7px;
+            font-weight: 700;
+            color: #000;
+            background: white;
+        }
+        .tag-pendek .tag-rak-row { font-size: 6px; }
+
+        .tag-blue {
+            background: #2b6cb0;
+            color: #000;
+            padding: 1px 4px;
+            font-size: 8px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            height: 15px; /* 4mm = 15px */
+        }
+        .tag-panjang .tag-blue { height: 15px; }
+        .tag-pendek .tag-blue { height: 11px; font-size: 7px; } /* 3mm */
+
+        .tag-gap-1 { height: 4px; background: white; } /* ~1mm */
+        .tag-gap-2 { height: 6px; background: white; } /* ~1.5mm */
+
+        .tag-red {
+            background: #e53e3e;
+            color: #000;
+            padding: 1px 4px;
+            font-size: 7px;
+            font-weight: 700;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 15px; /* 4mm = 15px */
+        }
+        .tag-panjang .tag-red { height: 15px; }
+        .tag-pendek .tag-red { height: 11px; font-size: 6px; } /* 3mm */
+
+        /* ===== STRUK ===== */
+        .struk-box {
+            background: #f7fafc;
+            border-radius: 12px;
+            padding: 14px;
+            border: 2px dashed #cbd5e0;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.7;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .struk-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+        .payment-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            background: #f7fafc;
+            padding: 8px 12px;
+            border-radius: 10px;
+            margin-top: 8px;
+            align-items: center;
+        }
+        .payment-row select { width: auto; padding: 4px 10px; }
+        .payment-row input { width: 90px; padding: 4px 10px; }
+
+        /* ===== HISTORY ===== */
+        .history-list { max-height: 220px; overflow-y: auto; }
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 8px;
+            border-bottom: 1px solid #edf2f7;
+            font-size: 12px;
+        }
+        .history-item:last-child { border-bottom: none; }
+        .history-item .date { font-weight: 600; color: #2b6cb0; }
+        .history-item .total { font-weight: 700; }
+
+        /* ===== TOAST ===== */
+        .toast {
+            position: fixed;
+            bottom: 30px; right: 30px;
+            background: #2d3748;
+            color: white;
+            padding: 10px 18px;
+            border-radius: 12px;
+            font-weight: 500;
+            font-size: 13px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            opacity: 0;
+            transform: translateY(20px);
+            transition: 0.3s;
+            z-index: 999;
+            pointer-events: none;
+            max-width: 90%;
+        }
+        .toast.show { opacity: 1; transform: translateY(0); }
+        .text-muted { color: #718096; font-size: 11px; }
+        .total-display { font-size: 16px; font-weight: 700; color: #2b6cb0; }
+        .mt-8 { margin-top: 8px; }
+        .flex { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .relative { position: relative; }
+        .hidden { display: none !important; }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .chart-container { max-height: 200px; position: relative; }
+        .stock-warning {
+            background: #fff5f5;
+            border-left: 4px solid #e53e3e;
+            padding: 6px 10px;
+            border-radius: 8px;
+            margin-bottom: 4px;
+            font-size: 12px;
+        }
+        .stock-warning i { color: #e53e3e; margin-right: 6px; }
+
+        .pricetag-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+            max-height: 500px;
+            overflow-y: auto;
+            padding: 4px;
+        }
+        .pricetag-grid .pricetag-preview {
+            margin: 0;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .container { padding: 8px; }
+            .header { padding: 10px 14px; }
+            .header h1 { font-size: 16px; }
+            .tab { font-size: 10px; padding: 6px 8px; min-width: 50px; }
+            .card { padding: 12px 14px; }
+            .login-box { padding: 24px; margin: 16px; }
+            .dashboard-stats { grid-template-columns: 1fr 1fr; }
+            .pricetag-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+            .pricetag-preview.panjang { width: 180px; }
+            .pricetag-preview.panjang .tag-content { height: 100px; }
+            .pricetag-preview.pendek { width: 112px; }
+            .pricetag-preview.pendek .tag-content { height: 100px; }
         }
     </style>
-<body class="bg-gray-50 font-sans min-h-screen text-gray-800">
+</head>
+<body>
 
-    <div class="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
-        
-        <header class="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
-            <div>
-                <h1 class="text-2xl font-bold text-indigo-700">ReturEntry Pro 🚀</h1>
-                <p class="text-sm text-gray-500">Aplikasi Pembantu Data Entry & Scanning Retur Supplier</p>
+<div id="app">
+    <!-- TOAST -->
+    <div id="toast" class="toast">{{ toastMessage }}</div>
+
+    <!-- LOGIN -->
+    <div class="login-overlay" v-if="!isLoggedIn">
+        <div class="login-box">
+            <h1><i class="fas fa-store" style="color:#1a365d;"></i> {{ settings.namaUsaha }}</h1>
+            <p class="sub">POS System v3.0 · Offline</p>
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" v-model="loginForm.username" placeholder="Masukkan username" @keyup.enter="login" />
             </div>
-            <div class="flex items-center gap-3">
-                <span class="text-xs font-semibold px-3 py-1 rounded-full bg-gray-100 text-gray-600">
-                    Status: <span id="app-status" class="text-red-500">Belum Ada Master Data</span>
-                </span>
-                <button id="btn-clear-all" class="hidden bg-red-50 hover:bg-red-100 text-red-600 px-4 py-2 rounded-xl text-xs font-bold transition">
-                    Reset Semua Data
-                </button>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" v-model="loginForm.password" placeholder="Masukkan password" @keyup.enter="login" />
             </div>
-        </header>
-
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            <div class="lg:col-span-1 flex flex-col gap-6">
-                
-                <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
-                    <h2 class="text-md font-bold mb-3 flex items-center gap-2 text-gray-700">
-                        <span class="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-600">1</span>
-                        Upload Master Data Produk
-                    </h2>
-                    <input type="file" id="excel-file" accept=".xlsx, .xls, .csv" 
-                        class="block w-full text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer"/>
-                    <p id="status-master-load" class="text-xs text-green-600 font-medium mt-2 hidden">✓ <span id="total-items">0</span> produk termuat.</p>
-                </div>
-
-                <div id="interaction-section" class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 opacity-40 pointer-events-none transition-all">
-                    <h2 class="text-md font-bold mb-3 flex items-center gap-2 text-gray-700">
-                        <span class="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-600">2</span>
-                        Scan / Cari Produk
-                    </h2>
-                    
-                    <div class="overflow-hidden rounded-xl bg-gray-900 mb-4 aspect-video flex items-center justify-center border border-gray-300">
-                        <div id="reader" class="w-full"></div>
-                    </div>
-
-                    <div class="flex gap-2">
-                        <input type="text" id="manual-barcode" placeholder="Masukkan Barcode / PLU..." 
-                            class="flex-1 px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs">
-                        <button id="btn-lookup" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-medium transition">
-                            Cari
-                        </button>
-                    </div>
-                </div>
-
-            </div>
-
-            <div class="lg:col-span-2 flex flex-col gap-6">
-                
-                <div id="entry-form-section" class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 hidden">
-                    <h2 class="text-md font-bold mb-4 text-indigo-600 flex items-center gap-2">
-                        📥 Form Input Data Retur
-                    </h2>
-                    
-                    <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-4 grid grid-cols-2 gap-3 text-xs">
-                        <div>
-                            <span class="text-gray-400 block">Deskripsi Produk:</span>
-                            <span id="entry-descp" class="font-bold text-sm text-gray-900">-</span>
-                        </div>
-                        <div>
-                            <span class="text-gray-400 block">Kode PLU:</span>
-                            <span id="entry-plu" class="font-mono font-bold text-sm text-gray-900">-</span>
-                        </div>
-                        <div>
-                            <span class="text-gray-400 block">Barcode:</span>
-                            <span id="entry-barcode" class="font-mono text-gray-600">-</span>
-                        </div>
-                        <div>
-                            <span class="text-gray-400 block">Kategori / Harga:</span>
-                            <span id="entry-info" class="text-gray-600">-</span>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1">Jumlah Qty Retur <span class="text-red-500">*</span></label>
-                            <input type="number" id="retur-qty" min="1" placeholder="Contoh: 10"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1">Tanggal Kedaluwarsa (Expired) <span class="text-red-500">*</span></label>
-                            <input type="date" id="retur-exp" 
-                                class="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
-                        </div>
-                    </div>
-
-                    <div class="flex justify-end gap-2">
-                        <button id="btn-cancel-entry" class="px-4 py-2 text-xs font-semibold text-gray-500 hover:text-gray-700">Batal</button>
-                        <button id="btn-save-entry" class="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-xl text-xs font-bold transition">
-                            Tambahkan ke Daftar Retur
-                        </button>
-                    </div>
-                </div>
-
-                <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 flex-1 flex flex-col">
-                    <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
-                        <div>
-                            <h2 class="text-md font-bold text-gray-700">Daftar Item Siap Retur</h2>
-                            <p class="text-xs text-gray-400">Data di bawah ini akan di-export ke laporan Excel.</p>
-                        </div>
-                        <button id="btn-export" class="hidden bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5">
-                            📊 Export ke Excel (.xlsx)
-                        </button>
-                    </div>
-
-                    <div class="overflow-x-auto border border-gray-100 rounded-xl flex-1 min-h-[200px]">
-                        <table class="w-full text-left border-collapse text-xs">
-                            <thead>
-                                <tr class="bg-gray-50 text-gray-500 border-b border-gray-100">
-                                    <th class="p-3 font-semibold">PLU</th>
-                                    <th class="p-3 font-semibold">Barcode</th>
-                                    <th class="p-3 font-semibold">Deskripsi Produk</th>
-                                    <th class="p-3 font-semibold text-center">Qty Retur</th>
-                                    <th class="p-3 font-semibold">Tgl Expired</th>
-                                    <th class="p-3 font-semibold text-center">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody id="retur-table-body">
-                                <tr>
-                                    <td colspan="6" class="p-8 text-center text-gray-400 italic">Belum ada item yang ditambahkan. Silakan unggah master data lalu scan barcode produk.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
+            <button class="login-btn" @click="login"><i class="fas fa-sign-in-alt"></i> Masuk</button>
+            <div class="login-error" v-if="loginError">{{ loginError }}</div>
+            <div style="margin-top:16px; text-align:center; font-size:12px; color:#a0aec0;">
+                <p>Akun demo: <strong>admin</strong> / <strong>admin123</strong></p>
             </div>
         </div>
     </div>
 
-    <script>
-        let masterData = []; // Menyimpan file excel produk yang diupload
-        let returList = [];  // Menyimpan data entry retur sementara
-        let currentActiveProduct = null;
-        let html5QrcodeScanner = null;
+    <!-- MAIN APP -->
+    <div v-else class="container">
+        <!-- HEADER -->
+        <div class="header">
+            <h1><i class="fas fa-store"></i> {{ settings.namaUsaha }}</h1>
+            <div class="header-info">
+                <span class="badge-status" :class="networkStatus.class">
+                    <i :class="networkStatus.icon"></i> {{ networkStatus.label }}
+                    <span v-if="pendingSyncCount > 0" style="margin-left:4px; background:rgba(255,255,255,0.3); padding:0 8px; border-radius:12px;">
+                        {{ pendingSyncCount }} pending
+                    </span>
+                </span>
+                <span class="user-badge"><i class="fas fa-user-circle"></i> {{ currentUser.nama }}</span>
+                <button class="btn btn-danger btn-sm" @click="logout"><i class="fas fa-sign-out-alt"></i> Keluar</button>
+            </div>
+        </div>
 
-        // Elemen-elemen DOM
-        const excelInput = document.getElementById('excel-file');
-        const statusMasterLoad = document.getElementById('status-master-load');
-        const totalItems = document.getElementById('total-items');
-        const interactionSection = document.getElementById('interaction-section');
-        const appStatus = document.getElementById('app-status');
-        const btnClearAll = document.getElementById('btn-clear-all');
-        const manualBarcode = document.getElementById('manual-barcode');
-        const btnLookup = document.getElementById('btn-lookup');
-        
-        // Form Data Entry Elemen
-        const entryFormSection = document.getElementById('entry-form-section');
-        const entryDescp = document.getElementById('entry-descp');
-        const entryPlu = document.getElementById('entry-plu');
-        const entryBarcode = document.getElementById('entry-barcode');
-        const entryInfo = document.getElementById('entry-info');
-        const returQty = document.getElementById('retur-qty');
-        const returExp = document.getElementById('retur-exp');
-        const btnSaveEntry = document.getElementById('btn-save-entry');
-        const btnCancelEntry = document.getElementById('btn-cancel-entry');
+        <!-- TABS -->
+        <div class="tabs">
+            <button class="tab" :class="{ active: activeTab === 'dashboard' }" @click="activeTab = 'dashboard'">
+                <i class="fas fa-chart-pie"></i> Dashboard
+            </button>
+            <button class="tab" :class="{ active: activeTab === 'checker' }" @click="activeTab = 'checker'">
+                <i class="fas fa-search"></i> Cek Harga
+            </button>
+            <button class="tab" :class="{ active: activeTab === 'scan' }" @click="activeTab = 'scan'">
+                <i class="fas fa-camera"></i> Scan
+            </button>
+            <button class="tab" :class="{ active: activeTab === 'struk' }" @click="activeTab = 'struk'">
+                <i class="fas fa-receipt"></i> Struk
+            </button>
+            <button class="tab" :class="{ active: activeTab === 'pricetag' }" @click="activeTab = 'pricetag'">
+                <i class="fas fa-tag"></i> Price Tag
+            </button>
+            <button class="tab" :class="{ active: activeTab === 'laporan' }" @click="activeTab = 'laporan'">
+                <i class="fas fa-file-alt"></i> Laporan
+            </button>
+            <button class="tab" :class="{ active: activeTab === 'database' }" @click="activeTab = 'database'">
+                <i class="fas fa-database"></i> Data
+            </button>
+        </div>
 
-        // Tabel & Export Elemen
-        const returTableBody = document.getElementById('retur-table-body');
-        const btnExport = document.getElementById('btn-export');
+        <!-- ==================== TAB: DASHBOARD ==================== -->
+        <div class="tab-content" :class="{ active: activeTab === 'dashboard' }">
+            <div class="dashboard-stats">
+                <div class="stat-card">
+                    <div class="icon">💰</div>
+                    <div class="number">{{ formatRupiah(totalPenjualanHariIni) }}</div>
+                    <div class="label">Penjualan Hari Ini</div>
+                </div>
+                <div class="stat-card">
+                    <div class="icon">📦</div>
+                    <div class="number">{{ totalTransaksiHariIni }}</div>
+                    <div class="label">Transaksi Hari Ini</div>
+                </div>
+                <div class="stat-card">
+                    <div class="icon">📊</div>
+                    <div class="number">{{ products.length }}</div>
+                    <div class="label">Total Produk</div>
+                </div>
+                <div class="stat-card" style="border: 2px solid #e53e3e;" v-if="produkStokMenipis.length > 0">
+                    <div class="icon">⚠️</div>
+                    <div class="number" style="color:#e53e3e;">{{ produkStokMenipis.length }}</div>
+                    <div class="label">Stok Menipis!</div>
+                </div>
+            </div>
 
-        // --- 1. PROSES BACA EXCEL MASTER DATA (SUDAH DIOPTIMALKAN) ---
-        excelInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
+            <div class="grid-2">
+                <div class="card">
+                    <h3><i class="fas fa-chart-bar"></i> Penjualan 7 Hari</h3>
+                    <div class="chart-container"><canvas id="salesChart"></canvas></div>
+                </div>
+                <div class="card">
+                    <h3><i class="fas fa-exclamation-triangle" style="color:#e53e3e;"></i> Stok Menipis</h3>
+                    <div v-if="produkStokMenipis.length === 0" class="empty-state">
+                        <i class="fas fa-check-circle" style="color:#38a169; font-size:24px;"></i>
+                        <p>Semua stok aman</p>
+                    </div>
+                    <div v-else>
+                        <div v-for="p in produkStokMenipis.slice(0, 5)" :key="p.plu" class="stock-warning">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <strong>{{ p.desc || p.s_descp }}</strong> 
+                            Stok: {{ p.qty1 || 0 }}
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-            const reader = new FileReader();
-            reader.onload = function(e) {
+            <div class="card">
+                <h3><i class="fas fa-clock"></i> Transaksi Terakhir</h3>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>Tanggal</th><th>Kasir</th><th class="text-right">Total</th><th>Metode</th></tr></thead>
+                        <tbody>
+                            <tr v-for="h in history.slice(0, 10)" :key="h.id">
+                                <td>{{ h.tanggal }}</td>
+                                <td><span class="badge badge-blue">{{ h.kasir || '-' }}</span></td>
+                                <td class="text-right">{{ formatRupiah(h.grandTotal) }}</td>
+                                <td><span class="badge">{{ h.payment || '-' }}</span></td>
+                            </tr>
+                            <tr v-if="history.length === 0"><td colspan="4" class="empty-state">Belum ada transaksi</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== TAB: CEK HARGA ==================== -->
+        <div class="tab-content" :class="{ active: activeTab === 'checker' }">
+            <div class="grid-2">
+                <div>
+                    <div class="card">
+                        <h3><i class="fas fa-barcode"></i> Cari Produk</h3>
+                        <div class="form-group">
+                            <label>Scan / Ketik Barcode atau PLU</label>
+                            <input type="text" v-model="searchBarcode" @input="findProduct" placeholder="Scan atau ketik barcode..." />
+                        </div>
+                        <button class="btn btn-primary" style="width:100%;" @click="findProduct">
+                            <i class="fas fa-search"></i> Cari
+                        </button>
+                    </div>
+
+                    <div class="card" v-if="foundProduct">
+                        <h3><i class="fas fa-info-circle"></i> Detail Produk</h3>
+                        <div class="product-info">
+                            <div><span class="label">Barcode</span><div class="value">{{ foundProduct.barcode || '-' }}</div></div>
+                            <div><span class="label">PLU</span><div class="value">{{ foundProduct.plu || '-' }}</div></div>
+                            <div style="grid-column: span 2;"><span class="label">Nama Barang</span><div class="value" style="font-size:15px;">{{ foundProduct.desc || foundProduct.s_descp || '-' }}</div></div>
+                            <div><span class="label">Kategori</span><div class="value">{{ foundProduct.kategori || '-' }}</div></div>
+                            <div><span class="label">Harga Jual</span><div class="value price">{{ formatRupiah(foundProduct.price1) }}</div></div>
+                            <div><span class="label">Lokasi Rak</span><div class="value">{{ foundProduct.lokasi_rak || '-' }}</div></div>
+                            <div><span class="label">Retur Hari</span><div class="value">{{ foundProduct.retur_hari || 0 }} hari</div></div>
+                            <div><span class="label">Stok</span><div class="value" :style="{ color: (foundProduct.qty1 || 0) <= 3 ? '#e53e3e' : '#1a202c' }">{{ foundProduct.qty1 || 0 }}</div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="card">
+                        <h3><i class="fas fa-list"></i> Semua Produk</h3>
+                        <div class="table-wrap" style="max-height:400px; overflow-y:auto;">
+                            <table>
+                                <thead><tr><th>Barcode</th><th>Nama</th><th class="text-right">Harga</th><th>Rak</th></tr></thead>
+                                <tbody>
+                                    <tr v-for="p in products.slice(0, 50)" :key="p.plu" @click="selectProductFromList(p)" style="cursor:pointer;">
+                                        <td><span class="badge">{{ p.barcode || p.plu }}</span></td>
+                                        <td>{{ (p.desc || p.s_descp || '').slice(0, 22) }}</td>
+                                        <td class="text-right">{{ formatRupiah(p.price1) }}</td>
+                                        <td><span class="badge badge-yellow">{{ p.lokasi_rak || '-' }}</span></td>
+                                    </tr>
+                                    <tr v-if="products.length === 0"><td colspan="4" class="empty-state">Upload data produk dulu ya!</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== TAB: SCAN ==================== -->
+        <div class="tab-content" :class="{ active: activeTab === 'scan' }">
+            <div class="grid-2">
+                <div>
+                    <div class="card">
+                        <h3><i class="fas fa-camera"></i> Scanner Barcode</h3>
+                        <div id="scanner-container">
+                            <div id="reader" style="width:100%;"></div>
+                            <div class="scanner-overlay" v-if="isScanning"></div>
+                            <div class="scanner-line" v-if="isScanning"></div>
+                        </div>
+                        <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+                            <button class="btn btn-success" @click="startScanner" :disabled="isScanning">
+                                <i class="fas fa-play"></i> Start
+                            </button>
+                            <button class="btn btn-danger" @click="stopScanner" :disabled="!isScanning">
+                                <i class="fas fa-stop"></i> Stop
+                            </button>
+                            <span class="badge badge-blue" v-if="isScanning">Aktif</span>
+                        </div>
+                    </div>
+
+                    <div class="card" v-if="scannedProduct">
+                        <h3><i class="fas fa-check-circle" style="color:#38a169;"></i> Hasil Scan</h3>
+                        <div class="product-info">
+                            <div><span class="label">Barcode</span><div class="value">{{ scannedProduct.barcode || scannedProduct.plu }}</div></div>
+                            <div><span class="label">Nama</span><div class="value">{{ scannedProduct.desc || scannedProduct.s_descp }}</div></div>
+                            <div><span class="label">Harga</span><div class="value price">{{ formatRupiah(scannedProduct.price1) }}</div></div>
+                            <div><span class="label">Rak</span><div class="value">{{ scannedProduct.lokasi_rak || '-' }}</div></div>
+                        </div>
+                        <div style="margin-top:8px; display:flex; gap:6px; flex-wrap:wrap;">
+                            <button class="btn btn-primary btn-sm" @click="addScannedToStruk">
+                                <i class="fas fa-cart-plus"></i> Tambah ke Struk
+                            </button>
+                            <button class="btn btn-warning btn-sm" @click="printPricetagFromScan">
+                                <i class="fas fa-tag"></i> Price Tag
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="card">
+                        <h3><i class="fas fa-history"></i> History Scan</h3>
+                        <div class="history-list">
+                            <div v-for="(s, idx) in scanHistory" :key="idx" class="history-item">
+                                <div><span class="date">{{ s.barcode }}</span> <span class="text-muted">{{ s.desc }}</span></div>
+                                <div><span class="total">{{ formatRupiah(s.price) }}</span></div>
+                            </div>
+                            <div v-if="scanHistory.length === 0" class="empty-state">Belum ada scan</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== TAB: STRUK ==================== -->
+        <div class="tab-content" :class="{ active: activeTab === 'struk' }">
+            <div class="grid-2">
+                <div>
+                    <div class="card">
+                        <h3><i class="fas fa-plus-circle"></i> Tambah Item</h3>
+                        <div class="form-group">
+                            <label>Tanggal</label>
+                            <input type="date" v-model="form.tanggal" />
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Barcode</label>
+                                <input type="text" v-model="form.barcode" @input="searchProduct" placeholder="Scan / ketik" />
+                            </div>
+                            <div class="form-group">
+                                <label>Deskripsi</label>
+                                <input type="text" v-model="form.deskripsi" placeholder="Nama barang" />
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Qty</label>
+                                <input type="number" v-model.number="form.qty" min="1" />
+                            </div>
+                            <div class="form-group">
+                                <label>Harga</label>
+                                <input type="number" v-model.number="form.harga" placeholder="Rp" />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Total</label>
+                            <input type="text" :value="formatRupiah(form.qty * form.harga)" disabled />
+                        </div>
+                        <button class="btn-add" @click="addItem"><i class="fas fa-cart-plus"></i> Tambahkan</button>
+                    </div>
+
+                    <div class="card">
+                        <h3><i class="fas fa-list"></i> Daftar Belanja <span class="badge badge-blue">{{ items.length }}</span></h3>
+                        <div class="table-wrap">
+                            <table>
+                                <thead><tr><th>Barcode</th><th>Deskripsi</th><th class="text-center">Qty</th><th class="text-right">Total</th><th></th></tr></thead>
+                                <tbody>
+                                    <tr v-for="(item, idx) in items" :key="idx">
+                                        <td><span class="badge">{{ item.barcode || '-' }}</span></td>
+                                        <td>{{ item.deskripsi }}</td>
+                                        <td class="text-center">
+                                            <div class="qty-control" style="justify-content:center;">
+                                                <button @click="updateQty(idx, -1)">-</button>
+                                                <span>{{ item.qty }}</span>
+                                                <button @click="updateQty(idx, 1)">+</button>
+                                            </div>
+                                        </td>
+                                        <td class="text-right">{{ formatRupiah(item.total) }}</td>
+                                        <td><button class="btn-delete" @click="removeItem(idx)"><i class="fas fa-trash-alt"></i></button></td>
+                                    </tr>
+                                    <tr v-if="!items.length"><td colspan="5" class="empty-state">Belum ada item</td></tr>
+                                    <tr class="total-row" v-if="items.length">
+                                        <td colspan="3" class="text-right">Total</td>
+                                        <td class="text-right total-display">{{ formatRupiah(grandTotal) }}</td>
+                                        <td></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="card">
+                        <h3><i class="fas fa-print"></i> Preview Struk</h3>
+                        <div class="struk-box">{{ strukText }}</div>
+                        <div class="struk-actions">
+                            <button class="btn btn-primary" @click="printStruk"><i class="fas fa-print"></i> Print</button>
+                            <button class="btn btn-success" @click="saveToHistory"><i class="fas fa-save"></i> Simpan</button>
+                            <button class="btn btn-warning" @click="clearStruk"><i class="fas fa-eraser"></i> Kosongkan</button>
+                        </div>
+                        <div class="payment-row">
+                            <span><strong>Bayar:</strong></span>
+                            <select v-model="paymentMethod">
+                                <option value="Tunai">Tunai</option>
+                                <option value="Credit Card">Credit Card</option>
+                                <option value="QRIS">QRIS</option>
+                                <option value="Transfer">Transfer</option>
+                            </select>
+                            <span><strong>Diskon:</strong></span>
+                            <input type="number" v-model.number="discount" placeholder="Rp" />
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3><i class="fas fa-history"></i> History Transaksi</h3>
+                        <div class="history-list">
+                            <div v-if="history.length === 0" class="empty-state">Belum ada</div>
+                            <div v-for="(h, idx) in history" :key="idx" class="history-item">
+                                <div><span class="date">{{ h.tanggal }}</span> <span class="text-muted">{{ h.items.length }} item</span></div>
+                                <div>
+                                    <span class="total">{{ formatRupiah(h.grandTotal) }}</span>
+                                    <button class="btn-delete" @click="deleteHistory(idx)" style="margin-left:6px;"><i class="fas fa-times"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="btn btn-danger" style="width:100%; margin-top:6px;" @click="clearHistory">
+                            <i class="fas fa-trash-alt"></i> Hapus Semua
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== TAB: PRICETAG ==================== -->
+        <div class="tab-content" :class="{ active: activeTab === 'pricetag' }">
+            <div class="grid-2">
+                <div>
+                    <div class="card">
+                        <h3><i class="fas fa-tag"></i> Cetak Price Tag</h3>
+                        <div class="form-group">
+                            <label>Cari Produk (Barcode / PLU)</label>
+                            <input type="text" v-model="pricetagSearch" @input="searchPricetagProduct" placeholder="Ketik barcode..." />
+                        </div>
+                        
+                        <div class="form-row" v-if="pricetagProduct">
+                            <div class="form-group">
+                                <label>Ukuran</label>
+                                <select v-model="pricetagUkuran">
+                                    <option value="panjang">Panjang (6.4×3.5 cm)</option>
+                                    <option value="pendek">Pendek (3.9×3.5 cm)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Jumlah</label>
+                                <div class="qty-control">
+                                    <button @click="pricetagQty = Math.max(1, pricetagQty - 1)">-</button>
+                                    <span>{{ pricetagQty }}</span>
+                                    <button @click="pricetagQty = pricetagQty + 1">+</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-row" v-if="pricetagProduct">
+                            <div class="form-group">
+                                <label>Layout PDF</label>
+                                <select v-model="pricetagLayout">
+                                    <option value="portrait">Portrait</option>
+                                    <option value="landscape">Landscape</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="display:flex; align-items:flex-end;">
+                                <button class="btn btn-primary" style="width:100%;" @click="generatePricetags" :disabled="!pricetagProduct">
+                                    <i class="fas fa-sync"></i> Generate
+                                </button>
+                            </div>
+                        </div>
+
+                        <button class="btn btn-success" style="width:100%; margin-top:8px;" @click="exportPricetagPDF" :disabled="generatedPricetags.length === 0">
+                            <i class="fas fa-file-pdf"></i> Export PDF ({{ generatedPricetags.length }} tag)
+                        </button>
+                    </div>
+
+                    <div class="card">
+                        <h3><i class="fas fa-file-import"></i> Upload Data Lomag</h3>
+                        <p class="text-muted" style="margin-top:-6px; margin-bottom:10px; font-size:12.5px;">
+                            Upload file daftar barcode dari aplikasi Lomag (.txt/.csv, satu kode per baris).
+                            Setiap kode yang cocok dengan database otomatis dibuatkan price tag baru.
+                        </p>
+                        <button class="btn btn-purple" style="width:100%;" @click="$refs.lomagFileInput.click()">
+                            <i class="fas fa-file-upload"></i> Pilih File Lomag
+                        </button>
+                        <input type="file" ref="lomagFileInput" @change="importLomagBarcodes" accept=".txt,.csv" style="display:none;" />
+                    </div>
+
+                    <div class="card">
+                        <h3><i class="fas fa-camera"></i> Kamera Otomatis Price Tag</h3>
+                        <p class="text-muted" style="margin-top:-6px; margin-bottom:10px; font-size:12.5px;">
+                            Arahkan kamera ke barcode produk — price tag akan otomatis dibuat setiap kali barcode terbaca.
+                            Matikan kamera saat tidak dipakai untuk menghemat daya HP/laptop.
+                        </p>
+                        <div id="reader-pricetag" style="width:100%;" v-show="isPricetagCameraOn"></div>
+                        <button class="btn" :class="isPricetagCameraOn ? 'btn-danger' : 'btn-success'" style="width:100%; margin-top:8px;" @click="togglePricetagCamera">
+                            <i class="fas" :class="isPricetagCameraOn ? 'fa-video-slash' : 'fa-video'"></i>
+                            {{ isPricetagCameraOn ? 'Matikan Kamera' : 'Nyalakan Kamera' }}
+                        </button>
+                        <span class="badge badge-blue" style="margin-top:6px; display:inline-block;" v-if="isPricetagCameraOn">Kamera Aktif</span>
+                    </div>
+
+                    <div class="card" v-if="pricetagProduct">
+                        <h3><i class="fas fa-info-circle"></i> Produk</h3>
+                        <div class="product-info">
+                            <div><span class="label">Barcode</span><div class="value">{{ pricetagProduct.barcode || pricetagProduct.plu }}</div></div>
+                            <div><span class="label">Nama</span><div class="value">{{ pricetagProduct.desc || pricetagProduct.s_descp }}</div></div>
+                            <div><span class="label">Harga</span><div class="value price">{{ formatRupiah(pricetagProduct.price1) }}</div></div>
+                            <div><span class="label">Rak</span><div class="value">{{ pricetagProduct.lokasi_rak || '-' }}</div></div>
+                            <div><span class="label">Retur</span><div class="value">{{ pricetagProduct.retur_hari || 0 }} hari</div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="card">
+                        <h3><i class="fas fa-th-large"></i> Preview Price Tags</h3>
+                        <div class="pricetag-grid" id="pricetagContainer">
+                            <div v-for="(tag, idx) in generatedPricetags" :key="idx" 
+                                 class="pricetag-preview" 
+                                 :class="pricetagUkuran">
+                                <div class="tag-content" :class="'tag-' + pricetagUkuran" 
+                                     :id="'pricetag-' + idx">
+                                    <!-- HARGA & NAMA -->
+                                    <div class="tag-body">
+                                        <div class="harga">Rp. {{ formatAngka(tag.price) }}<span class="satuan">/{{ tag.satuan || 'PCS' }}</span></div>
+                                        <div class="nama">{{ tag.nama }}</div>
+                                    </div>
+
+                                    <!-- BARCODE -->
+                                    <div class="tag-barcode">
+                                        <svg id="barcode-{{ idx }}"></svg>
+                                    </div>
+
+                                    <!-- LOKASI RAK: tepat di atas garis biru, rata kanan -->
+                                    <div class="tag-rak-row">{{ tag.rak || '-' }}</div>
+
+                                    <!-- GARIS BIRU: PLU rata kiri -->
+                                    <div class="tag-blue">{{ tag.plu || '-' }}</div>
+
+                                    <!-- jarak 1mm -->
+                                    <div class="tag-gap-1"></div>
+
+                                    <!-- GARIS MERAH: retur kiri, tanggal cetak kanan -->
+                                    <div class="tag-red">
+                                        <span>{{ tag.retur }}</span>
+                                        <span>{{ tag.tanggal }}</span>
+                                    </div>
+
+                                    <!-- jarak 1.5mm ke garis batas terluar -->
+                                    <div class="tag-gap-2"></div>
+                                </div>
+                            </div>
+                            <div v-if="generatedPricetags.length === 0" class="empty-state" style="grid-column:1/-1;">
+                                <i class="fas fa-tag" style="font-size:32px; color:#a0aec0;"></i>
+                                <p>Cari produk dan klik Generate</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== TAB: LAPORAN ==================== -->
+        <div class="tab-content" :class="{ active: activeTab === 'laporan' }">
+            <div class="card">
+                <h3><i class="fas fa-calendar-alt"></i> Laporan Penjualan</h3>
+                <div class="form-row">
+                    <div class="form-group"><label>Dari</label><input type="date" v-model="laporanStart" /></div>
+                    <div class="form-group"><label>Sampai</label><input type="date" v-model="laporanEnd" /></div>
+                </div>
+                <button class="btn btn-primary" @click="generateLaporan"><i class="fas fa-search"></i> Tampilkan</button>
+
+                <div v-if="laporanData" style="margin-top:16px;">
+                    <div class="dashboard-stats">
+                        <div class="stat-card"><div class="number">{{ formatRupiah(laporanData.totalPenjualan) }}</div><div class="label">Total Penjualan</div></div>
+                        <div class="stat-card"><div class="number">{{ laporanData.totalTransaksi }}</div><div class="label">Total Transaksi</div></div>
+                        <div class="stat-card"><div class="number">{{ laporanData.rataRata }}</div><div class="label">Rata-rata</div></div>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead><tr><th>Tanggal</th><th>Kasir</th><th class="text-right">Total</th><th>Metode</th></tr></thead>
+                            <tbody>
+                                <tr v-for="h in laporanData.transaksi" :key="h.id">
+                                    <td>{{ h.tanggal }}</td>
+                                    <td><span class="badge badge-blue">{{ h.kasir || '-' }}</span></td>
+                                    <td class="text-right">{{ formatRupiah(h.grandTotal) }}</td>
+                                    <td><span class="badge">{{ h.payment || '-' }}</span></td>
+                                </tr>
+                                <tr v-if="laporanData.transaksi.length === 0"><td colspan="4" class="empty-state">Tidak ada transaksi</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
+                        <button class="btn btn-success" @click="exportLaporanExcel"><i class="fas fa-file-excel"></i> Excel</button>
+                        <button class="btn btn-danger" @click="exportLaporanPDF"><i class="fas fa-file-pdf"></i> PDF</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== TAB: DATABASE ==================== -->
+        <div class="tab-content" :class="{ active: activeTab === 'database' }">
+            <div class="card" v-if="currentUser && currentUser.role === 'admin'">
+                <h3><i class="fas fa-user-shield" style="color:#1a365d;"></i> Pengaturan Admin</h3>
+                <div class="form-group">
+                    <label>Nama Usaha / Toko</label>
+                    <div style="display:flex; gap:8px;">
+                        <input type="text" v-model="settings.namaUsaha" placeholder="Nama usaha" style="flex:1;" />
+                        <button class="btn btn-primary" @click="saveSettings"><i class="fas fa-save"></i> Simpan</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Nama Kasir / Admin</label>
+                    <div v-for="u in users" :key="u.username" style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
+                        <span class="badge" style="min-width:70px; text-align:center;">{{ u.username }}</span>
+                        <input type="text" v-model="u.nama" placeholder="Nama tampilan" style="flex:1;" />
+                        <button class="btn btn-primary btn-sm" @click="saveUserName(u)"><i class="fas fa-save"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" style="background: linear-gradient(135deg, #ebf4ff, #f0f4f8);">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                    <div>
+                        <h3 style="margin-bottom:0;"><i class="fas fa-database" style="color:#805ad5;"></i> Database Produk</h3>
+                        <span class="text-muted">{{ products.length }} produk tersimpan di IndexedDB</span>
+                    </div>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <button class="btn btn-purple btn-sm" @click="triggerUpload"><i class="fas fa-file-upload"></i> Upload Excel</button>
+                        <input type="file" ref="fileInput" @change="handleFileUpload" accept=".xlsx,.xls" style="display:none;" />
+                        <button class="btn btn-danger btn-sm" @click="clearProducts"><i class="fas fa-trash"></i> Hapus DB</button>
+                        <button class="btn btn-success btn-sm" @click="exportProductsExcel"><i class="fas fa-download"></i> Export Excel</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3><i class="fas fa-list"></i> Semua Produk ({{ products.length }})</h3>
+                <div class="table-wrap" style="max-height:400px; overflow-y:auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>PLU</th>
+                                <th>Barcode</th>
+                                <th>Nama</th>
+                                <th class="text-right">Harga</th>
+                                <th>Rak</th>
+                                <th>Retur</th>
+                                <th class="text-center">Stok</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="p in products" :key="p.plu">
+                                <td><span class="badge badge-blue">{{ p.plu }}</span></td>
+                                <td><span class="badge">{{ p.barcode || '-' }}</span></td>
+                                <td>{{ (p.desc || p.s_descp || '').slice(0, 25) }}</td>
+                                <td class="text-right">{{ formatRupiah(p.price1) }}</td>
+                                <td><span class="badge badge-yellow">{{ p.lokasi_rak || '-' }}</span></td>
+                                <td>{{ p.retur_hari || 0 }} hari</td>
+                                <td class="text-center" :style="{ color: (p.qty1 || 0) <= 3 ? '#e53e3e' : '#1a202c' }">{{ p.qty1 || 0 }}</td>
+                            </tr>
+                            <tr v-if="products.length === 0"><td colspan="7" class="empty-state">Belum ada data produk</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ============================================================
+    // INDEXEDDB HELPER
+    // ============================================================
+    const DB_NAME = 'TokoLarisDB';
+    const DB_VERSION = 1;
+
+    function openDB() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(DB_NAME, DB_VERSION);
+            request.onupgradeneeded = (event) => {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains('products')) {
+                    db.createObjectStore('products', { keyPath: 'plu' });
+                }
+                if (!db.objectStoreNames.contains('transactions')) {
+                    const store = db.createObjectStore('transactions', { keyPath: 'id', autoIncrement: true });
+                    store.createIndex('tanggal', 'tanggal');
+                }
+                if (!db.objectStoreNames.contains('pending')) {
+                    db.createObjectStore('pending', { keyPath: 'id', autoIncrement: true });
+                }
+            };
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    async function dbPut(store, data) {
+        const db = await openDB();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(store, 'readwrite');
+            const req = tx.objectStore(store).put(data);
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    async function dbGetAll(store) {
+        const db = await openDB();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(store, 'readonly');
+            const req = tx.objectStore(store).getAll();
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    async function dbDelete(store, key) {
+        const db = await openDB();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(store, 'readwrite');
+            const req = tx.objectStore(store).delete(key);
+            req.onsuccess = () => resolve();
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    async function dbClear(store) {
+        const db = await openDB();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(store, 'readwrite');
+            const req = tx.objectStore(store).clear();
+            req.onsuccess = () => resolve();
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    // ============================================================
+    // VUE APP
+    // ============================================================
+    new Vue({
+        el: '#app',
+        data: {
+            // Auth
+            isLoggedIn: false,
+            currentUser: null,
+            loginForm: { username: '', password: '' },
+            loginError: '',
+            users: [
+                { username: 'admin', password: 'admin123', nama: 'Admin', role: 'admin' },
+                { username: 'salma', password: 'salma123', nama: 'Salma', role: 'kasir' },
+                { username: 'budi', password: 'budi123', nama: 'Budi', role: 'kasir' }
+            ],
+
+            // Tab
+            activeTab: 'dashboard',
+
+            // Form
+            form: {
+                tanggal: '',
+                barcode: '',
+                deskripsi: '',
+                qty: 1,
+                harga: 0
+            },
+            items: [],
+            paymentMethod: 'Tunai',
+            discount: 0,
+            history: [],
+            products: [],
+
+            // Search
+            searchBarcode: '',
+            foundProduct: null,
+
+            // Scanner
+            isScanning: false,
+            lastScannedCode: '',
+            scannedProduct: null,
+            scanHistory: [],
+            html5QrCode: null,
+
+            // Pengaturan usaha (nama usaha, dll) - tersimpan di localStorage
+            settings: {
+                namaUsaha: 'TOKO LARIS'
+            },
+
+            // Pricetag
+            pricetagSearch: '',
+            pricetagProduct: null,
+            pricetagQty: 1,
+            pricetagUkuran: 'panjang',
+            pricetagLayout: 'portrait',
+            generatedPricetags: [],
+            // Kamera khusus otomatisasi pricetag (terpisah dari kamera tab Scan)
+            isPricetagCameraOn: false,
+            pricetagQrCode: null,
+            pricetagCamLastCode: '',
+            pricetagCamCooldownUntil: 0,
+
+            // Laporan
+            laporanStart: '',
+            laporanEnd: '',
+            laporanData: null,
+
+            // Network
+            networkStatus: { label: 'Online', class: 'online', icon: 'fas fa-wifi' },
+            pendingSyncCount: 0,
+
+            // Toast
+            toastMessage: '',
+            _toastTimeout: null,
+
+            // Chart
+            salesChart: null
+        },
+
+        computed: {
+            grandTotal() {
+                return this.items.reduce((sum, item) => sum + (item.total || 0), 0);
+            },
+            grandTotalAfterDiscount() {
+                return Math.max(0, this.grandTotal - (this.discount || 0));
+            },
+            totalPenjualanHariIni() {
+                const today = new Date().toISOString().slice(0, 10);
+                return this.history
+                    .filter(h => h.tanggal === today)
+                    .reduce((sum, h) => sum + h.grandTotal, 0);
+            },
+            totalTransaksiHariIni() {
+                const today = new Date().toISOString().slice(0, 10);
+                return this.history.filter(h => h.tanggal === today).length;
+            },
+            produkStokMenipis() {
+                return this.products.filter(p => (p.qty1 || 0) <= 3);
+            },
+            strukText() {
+                let s = '';
+                s += '================================\n';
+                s += '          ' + this.settings.namaUsaha + '\n';
+                s += '     Cihanjuang No. 137\n';
+                s += '    Telp. 0821-1880-3884\n';
+                s += '================================\n';
+                s += `Tanggal  : ${this.form.tanggal || '-'}\n`;
+                s += `Kasir    : ${this.currentUser ? this.currentUser.nama : 'Salma'}\n`;
+                s += '--------------------------------\n';
+                s += 'ITEM            QTY   TOTAL\n';
+                if (this.items.length === 0) {
+                    s += '   (kosong)\n';
+                } else {
+                    this.items.forEach(item => {
+                        const desc = (item.deskripsi || 'item').slice(0, 14);
+                        s += `${desc.padEnd(14)} ${String(item.qty).padStart(3)}  ${this.formatRupiah(item.total).padStart(12)}\n`;
+                    });
+                }
+                s += '--------------------------------\n';
+                s += `Subtotal     : ${this.formatRupiah(this.grandTotal)}\n`;
+                if (this.discount > 0) s += `Diskon       : ${this.formatRupiah(this.discount)}\n`;
+                s += `Grand Total  : ${this.formatRupiah(this.grandTotalAfterDiscount)}\n`;
+                s += `Metode Bayar : ${this.paymentMethod}\n`;
+                s += '================================\n';
+                s += '   Terima kasih belanja!\n';
+                return s;
+            }
+        },
+
+        methods: {
+            // ==================== AUTH ====================
+            login() {
+                const user = this.users.find(u => 
+                    u.username === this.loginForm.username && 
+                    u.password === this.loginForm.password
+                );
+                if (user) {
+                    this.currentUser = user;
+                    this.isLoggedIn = true;
+                    this.loginError = '';
+                    localStorage.setItem('currentUser', JSON.stringify(user));
+                    this.showToast(`✅ Selamat datang, ${user.nama}!`);
+                } else {
+                    this.loginError = 'Username atau password salah!';
+                }
+            },
+            logout() {
+                this.isLoggedIn = false;
+                this.currentUser = null;
+                localStorage.removeItem('currentUser');
+                this.showToast('👋 Sampai jumpa!');
+            },
+            loadUser() {
+                const stored = localStorage.getItem('currentUser');
+                if (stored) {
+                    try {
+                        const user = JSON.parse(stored);
+                        if (this.users.find(u => u.username === user.username)) {
+                            this.currentUser = user;
+                            this.isLoggedIn = true;
+                        }
+                    } catch(e) {}
+                }
+            },
+
+            // ==================== FORMAT ====================
+            formatRupiah(val) {
+                if (!val && val !== 0) return 'Rp 0';
+                return 'Rp ' + Number(val).toLocaleString('id-ID');
+            },
+            // Khusus tampilan harga di pricetag: "Rp. 61.700" + satuan terpisah (mis. "/PCS")
+            formatAngka(val) {
+                return Number(val || 0).toLocaleString('id-ID');
+            },
+
+            // ==================== DATABASE ====================
+            async loadProductsFromDB() {
                 try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
-                    const firstSheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[firstSheetName];
-                    
-                    // Ambil data mentah dari Excel
-                    const rawData = XLSX.utils.sheet_to_json(worksheet);
+                    this.products = await dbGetAll('products');
+                } catch(e) {
+                    console.error('Load products error:', e);
+                    this.products = [];
+                }
+            },
+            async loadHistoryFromDB() {
+                try {
+                    this.history = await dbGetAll('transactions');
+                    this.history.sort((a, b) => b.id - a.id);
+                } catch(e) {
+                    console.error('Load history error:', e);
+                    this.history = [];
+                }
+            },
+            async loadPendingSync() {
+                try {
+                    const pending = await dbGetAll('pending');
+                    this.pendingSyncCount = pending.length;
+                } catch(e) {
+                    this.pendingSyncCount = 0;
+                }
+            },
+            async saveProductToDB(product) {
+                await dbPut('products', product);
+            },
+            async saveTransactionToDB(transaction) {
+                await dbPut('transactions', transaction);
+            },
+            async deleteTransactionFromDB(id) {
+                await dbDelete('transactions', id);
+            },
+            async clearProductsDB() {
+                await dbClear('products');
+            },
+            async clearTransactionsDB() {
+                await dbClear('transactions');
+            },
 
-                    if(rawData.length === 0) {
-                        alert('File Excel kosong!');
+            // ==================== UPLOAD EXCEL ====================
+            triggerUpload() {
+                this.$refs.fileInput.click();
+            },
+            handleFileUpload(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                        
+                        const products = jsonData.map(row => ({
+                            plu: String(row.plu || row.PLU || ''),
+                            desc: row.desc || row.desc || row.desc || '',
+                            s_descp: row.s_descp || '',
+                            barcode: String(row.barcode || row.BARCODE || ''),
+                            kategori: row.kategori || '',
+                            price1: parseFloat(row.price1 || row.PRICE1 || 0),
+                            price2: parseFloat(row.price2 || 0),
+                            price3: parseFloat(row.price3 || 0),
+                            qty1: parseInt(row.qty1 || 0),
+                            qty2: parseInt(row.qty2 || 0),
+                            qty3: parseInt(row.qty3 || 0),
+                            lokasi_rak: row.lokasi_rak || '',
+                            retur_hari: (row.retur_hari === undefined || row.retur_hari === null || row.retur_hari === '') ? 0 : row.retur_hari,
+                            satuan: row.satuan || row.SATUAN || 'PCS',
+                            minStock: 3
+                        }));
+
+                        // Simpan ke IndexedDB
+                        for (const p of products) {
+                            await this.saveProductToDB(p);
+                        }
+                        this.products = products;
+                        this.showToast(`✅ ${products.length} produk berhasil diupload!`);
+                        this.$refs.fileInput.value = '';
+                    } catch (error) {
+                        this.showToast('⚠ Gagal membaca file: ' + error.message);
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            },
+
+            // ==================== CEK HARGA ====================
+            findProduct() {
+                const keyword = this.searchBarcode.trim();
+                if (!keyword) { this.foundProduct = null; return; }
+                this.foundProduct = this.products.find(p => 
+                    String(p.barcode).toLowerCase() === keyword.toLowerCase() ||
+                    String(p.plu).toLowerCase() === keyword.toLowerCase()
+                ) || null;
+            },
+            selectProductFromList(p) {
+                this.searchBarcode = p.barcode || p.plu;
+                this.foundProduct = p;
+                this.showToast(`✅ ${p.desc || p.s_descp} ditemukan`);
+            },
+
+            // ==================== SCANNER ====================
+            async startScanner() {
+                try {
+                    this.html5QrCode = new Html5Qrcode("reader");
+                    await this.html5QrCode.start(
+                        { facingMode: "environment" },
+                        { fps: 10, qrbox: { width: 220, height: 220 }, aspectRatio: 1.0 },
+                        this.onScanSuccess,
+                        this.onScanError
+                    );
+                    this.isScanning = true;
+                    this.showToast('📷 Scanner aktif!');
+                } catch (err) {
+                    this.showToast('⚠ Gagal akses kamera: ' + err.message);
+                }
+            },
+            stopScanner() {
+                if (this.html5QrCode) {
+                    this.html5QrCode.stop().then(() => {
+                        this.isScanning = false;
+                        this.showToast('Scanner dihentikan');
+                    });
+                }
+            },
+            onScanSuccess(decodedText) {
+                this.lastScannedCode = decodedText;
+                const product = this.products.find(p => 
+                    String(p.barcode).toLowerCase() === decodedText.toLowerCase() ||
+                    String(p.plu).toLowerCase() === decodedText.toLowerCase()
+                );
+                if (product) {
+                    this.scannedProduct = product;
+                    this.scanHistory.unshift({
+                        barcode: decodedText,
+                        desc: product.desc || product.s_descp,
+                        price: product.price1
+                    });
+                    this.showToast(`✅ ${product.desc || product.s_descp} ditemukan!`);
+                } else {
+                    this.scannedProduct = null;
+                    this.showToast('⚠ Barcode tidak ditemukan');
+                }
+                this.stopScanner();
+            },
+            onScanError(err) {},
+            addScannedToStruk() {
+                if (!this.scannedProduct) return;
+                const p = this.scannedProduct;
+                this.items.push({
+                    barcode: p.barcode || p.plu,
+                    deskripsi: p.desc || p.s_descp,
+                    qty: 1,
+                    harga: p.price1,
+                    total: p.price1
+                });
+                this.showToast('✔ Ditambahkan ke struk');
+                this.activeTab = 'struk';
+            },
+            // ==================== UPLOAD DATA LOMAG ====================
+            // Menerima file teks (.txt/.csv) berisi daftar barcode dari aplikasi Lomag,
+            // satu kode per baris. Setiap kode yang cocok dengan database produk akan
+            // otomatis dibuatkan satu pricetag baru (ditambahkan ke daftar yang sudah ada).
+            async importLomagBarcodes(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                try {
+                    const text = await file.text();
+                    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+                    let found = 0, notFound = 0;
+                    lines.forEach(line => {
+                        // Ambil token pertama sebagai kode barcode, antisipasi format Lomag
+                        // yang barangkali menyertakan kolom lain dipisah tab/koma/spasi.
+                        const kode = line.split(/[\t,; ]+/)[0].trim();
+                        if (!kode) return;
+                        const product = this.products.find(p =>
+                            String(p.barcode).toLowerCase() === kode.toLowerCase() ||
+                            String(p.plu).toLowerCase() === kode.toLowerCase()
+                        );
+                        if (product) {
+                            this.generatedPricetags.push(this.buildTagFromProduct(product));
+                            found++;
+                        } else {
+                            notFound++;
+                        }
+                    });
+                    if (found > 0) {
+                        this.showToast(`✅ ${found} price tag dari Lomag ditambahkan${notFound > 0 ? `, ${notFound} kode tidak ditemukan` : ''}`);
+                        this.$nextTick(() => this.renderBarcodes());
+                    } else {
+                        this.showToast('⚠ Tidak ada kode dari file Lomag yang cocok dengan database');
+                    }
+                } catch (e) {
+                    console.error('Import Lomag error:', e);
+                    this.showToast('⚠ Gagal membaca file Lomag');
+                } finally {
+                    event.target.value = '';
+                }
+            },
+
+            // ==================== KAMERA OTOMATIS PRICETAG ====================
+            // Kamera terpisah dari tab Scan biasa: sengaja bisa di ON/OFF-kan manual
+            // supaya hemat baterai HP/laptop, dan TIDAK berhenti otomatis setelah satu
+            // kali scan — supaya bisa langsung lanjut ke produk berikutnya.
+            async togglePricetagCamera() {
+                if (this.isPricetagCameraOn) {
+                    await this.stopPricetagCamera();
+                } else {
+                    await this.startPricetagCamera();
+                }
+            },
+            async startPricetagCamera() {
+                try {
+                    this.pricetagQrCode = new Html5Qrcode("reader-pricetag");
+                    await this.pricetagQrCode.start(
+                        { facingMode: "environment" },
+                        { fps: 10, qrbox: { width: 220, height: 220 }, aspectRatio: 1.0 },
+                        this.onPricetagCameraScan,
+                        () => {}
+                    );
+                    this.isPricetagCameraOn = true;
+                    this.showToast('📷 Kamera pricetag aktif — arahkan ke barcode produk');
+                } catch (err) {
+                    this.isPricetagCameraOn = false;
+                    this.showToast('⚠ Gagal akses kamera: ' + err.message);
+                }
+            },
+            async stopPricetagCamera() {
+                if (this.pricetagQrCode) {
+                    try {
+                        await this.pricetagQrCode.stop();
+                    } catch (e) { /* kamera mungkin sudah berhenti */ }
+                }
+                this.isPricetagCameraOn = false;
+                this.showToast('📷 Kamera pricetag dimatikan');
+            },
+            onPricetagCameraScan(decodedText) {
+                // Cegah kode yang sama ke-scan berkali-kali dalam jeda singkat (kamera scan tiap frame)
+                const now = Date.now();
+                if (decodedText === this.pricetagCamLastCode && now < this.pricetagCamCooldownUntil) return;
+                this.pricetagCamLastCode = decodedText;
+                this.pricetagCamCooldownUntil = now + 3000;
+
+                const product = this.products.find(p =>
+                    String(p.barcode).toLowerCase() === decodedText.toLowerCase() ||
+                    String(p.plu).toLowerCase() === decodedText.toLowerCase()
+                );
+                if (product) {
+                    this.generatedPricetags.push(this.buildTagFromProduct(product));
+                    this.showToast(`✅ Price tag "${product.desc || product.s_descp}" otomatis dibuat`);
+                    this.$nextTick(() => this.renderBarcodes());
+                } else {
+                    this.showToast(`⚠ Barcode ${decodedText} tidak ditemukan di database`);
+                }
+                // Kamera sengaja TIDAK dimatikan di sini, supaya bisa lanjut scan produk berikutnya.
+            },
+
+            // ==================== PENGATURAN ADMIN ====================
+            loadSettings() {
+                try {
+                    const raw = localStorage.getItem('posSettings');
+                    if (raw) this.settings = { ...this.settings, ...JSON.parse(raw) };
+                } catch (e) { /* pakai default */ }
+                document.title = this.settings.namaUsaha + ' - POS v3.0 (Offline)';
+            },
+            saveSettings() {
+                localStorage.setItem('posSettings', JSON.stringify(this.settings));
+                document.title = this.settings.namaUsaha + ' - POS v3.0 (Offline)';
+                this.showToast('✅ Nama usaha disimpan');
+            },
+            loadUserNames() {
+                try {
+                    const raw = localStorage.getItem('posUserNames');
+                    if (!raw) return;
+                    const saved = JSON.parse(raw);
+                    this.users.forEach(u => { if (saved[u.username]) u.nama = saved[u.username]; });
+                    if (this.currentUser) {
+                        const match = this.users.find(u => u.username === this.currentUser.username);
+                        if (match) this.currentUser.nama = match.nama;
+                    }
+                } catch (e) { /* pakai default */ }
+            },
+            saveUserName(user) {
+                try {
+                    const raw = localStorage.getItem('posUserNames');
+                    const saved = raw ? JSON.parse(raw) : {};
+                    saved[user.username] = user.nama;
+                    localStorage.setItem('posUserNames', JSON.stringify(saved));
+                    if (this.currentUser && this.currentUser.username === user.username) {
+                        this.currentUser.nama = user.nama;
+                        localStorage.setItem('currentUser', JSON.stringify(this.currentUser));
+                    }
+                    this.showToast(`✅ Nama untuk "${user.username}" disimpan`);
+                } catch (e) {
+                    this.showToast('⚠ Gagal menyimpan nama');
+                }
+            },
+            printPricetagFromScan() {
+                if (!this.scannedProduct) return;
+                this.pricetagProduct = this.scannedProduct;
+                this.pricetagQty = 1;
+                this.generatePricetags();
+                this.activeTab = 'pricetag';
+            },
+
+            // ==================== PRICETAG ====================
+            searchPricetagProduct() {
+                const keyword = this.pricetagSearch.trim();
+                if (!keyword) { this.pricetagProduct = null; return; }
+                this.pricetagProduct = this.products.find(p => 
+                    String(p.barcode).toLowerCase() === keyword.toLowerCase() ||
+                    String(p.plu).toLowerCase() === keyword.toLowerCase()
+                ) || null;
+            },
+            // Membentuk satu objek pricetag dari data produk — dipakai ulang oleh
+            // input manual, upload Lomag, maupun kamera otomatis.
+            buildTagFromProduct(p) {
+                return {
+                    plu: p.plu || '-',
+                    nama: p.desc || p.s_descp || 'Produk',
+                    price: p.price1 || 0,
+                    barcode: p.barcode || p.plu || '-',
+                    rak: p.lokasi_rak || '-',
+                    retur: (p.retur_hari === undefined || p.retur_hari === null || p.retur_hari === '') ? 0 : p.retur_hari,
+                    satuan: p.satuan || 'PCS',
+                    tanggal: this.formatTanggalTag(new Date())
+                };
+            },
+            generatePricetags() {
+                if (!this.pricetagProduct) return;
+                this.generatedPricetags = [];
+                for (let i = 0; i < this.pricetagQty; i++) {
+                    this.generatedPricetags.push(this.buildTagFromProduct(this.pricetagProduct));
+                }
+                this.showToast(`✅ ${this.pricetagQty} price tag dibuat`);
+                
+                // Render barcode setelah DOM update
+                this.$nextTick(() => {
+                    this.renderBarcodes();
+                });
+            },
+            // Tanggal real-time saat pricetag dibuat/dicetak, format: dd-Mon-yyyy
+            formatTanggalTag(d) {
+                const bulan = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+                const dd = String(d.getDate()).padStart(2, '0');
+                const mm = bulan[d.getMonth()];
+                const yyyy = d.getFullYear();
+                return `${dd}-${mm}-${yyyy}`;
+            },
+            renderBarcodes() {
+                this.generatedPricetags.forEach((tag, idx) => {
+                    const el = document.getElementById('barcode-' + idx);
+                    if (el) {
+                        try {
+                            JsBarcode(el, tag.barcode, {
+                                format: "CODE128",
+                                width: 1.2,
+                                height: 25,
+                                displayValue: true,
+                                fontSize: 10,
+                                margin: 2
+                            });
+                        } catch(e) {
+                            console.error('Barcode error:', e);
+                            this.showToast('⚠ Gagal render barcode: ' + (tag.barcode || '-'));
+                        }
+                    }
+                });
+            },
+            async exportPricetagPDF() {
+                if (this.generatedPricetags.length === 0) {
+                    this.showToast('⚠ Tidak ada tag untuk dicetak');
+                    return;
+                }
+
+                const { jsPDF } = window.jspdf;
+                const isLandscape = this.pricetagLayout === 'landscape';
+                const doc = new jsPDF(isLandscape ? 'landscape' : 'portrait', 'mm', 'a4');
+                
+                const pageWidth = isLandscape ? 297 : 210;
+                const pageHeight = isLandscape ? 210 : 297;
+                
+                // Ukuran tag dalam mm
+                const isPanjang = this.pricetagUkuran === 'panjang';
+                const tagWidth = isPanjang ? 64 : 39;
+                const tagHeight = isPanjang ? 35 : 35;
+                
+                const marginX = 10;
+                const marginY = 10;
+                const gapX = 5;
+                const gapY = 5;
+                
+                const colsPerRow = Math.floor((pageWidth - marginX * 2 + gapX) / (tagWidth + gapX));
+                const rowsPerPage = Math.floor((pageHeight - marginY * 2 + gapY) / (tagHeight + gapY));
+                const tagsPerPage = colsPerRow * rowsPerPage;
+
+                // ===== Dimensi bagian bawah tag (sesuai spesifikasi, dalam mm) =====
+                const blueHeight = isPanjang ? 4 : 3;      // tinggi garis biru
+                const redHeight = isPanjang ? 4 : 3;       // tinggi garis merah
+                const gap1 = 1;                            // jarak garis biru - garis merah
+                const gap2 = 1.5;                          // jarak garis merah - garis batas terluar
+                const rakRowHeight = isPanjang ? 3 : 2.5;  // baris lokasi rak (di atas garis biru)
+
+                for (let page = 0; page < Math.ceil(this.generatedPricetags.length / tagsPerPage); page++) {
+                    if (page > 0) doc.addPage();
+                    
+                    const startIdx = page * tagsPerPage;
+                    const endIdx = Math.min(startIdx + tagsPerPage, this.generatedPricetags.length);
+                    
+                    for (let i = startIdx; i < endIdx; i++) {
+                        const localIdx = i - startIdx;
+                        const row = Math.floor(localIdx / colsPerRow);
+                        const col = localIdx % colsPerRow;
+                        
+                        const x = marginX + col * (tagWidth + gapX);
+                        const y = marginY + row * (tagHeight + gapY);
+                        
+                        const tag = this.generatedPricetags[i];
+                        
+                        // Background putih
+                        doc.setFillColor(255, 255, 255);
+                        doc.rect(x, y, tagWidth, tagHeight, 'F');
+                        
+                        // Garis batas terluar, putus-putus
+                        doc.setDrawColor(160, 174, 192);
+                        doc.setLineDashPattern([1, 1]);
+                        doc.setLineWidth(0.3);
+                        doc.rect(x, y, tagWidth, tagHeight, 'S');
+                        doc.setLineDashPattern([], 0);
+
+                        // ===== Hitung posisi Y dari bawah tag =====
+                        const redBottomY = y + tagHeight - gap2;
+                        const redTopY = redBottomY - redHeight;
+                        const blueBottomY = redTopY - gap1;
+                        const blueTopY = blueBottomY - blueHeight;
+                        const rakRowBottomY = blueTopY;
+                        const rakRowTopY = rakRowBottomY - rakRowHeight;
+
+                        // ===== LOKASI RAK: tepat di atas garis biru, rata kanan, tanpa label =====
+                        doc.setFontSize(isPanjang ? 6.5 : 5.5);
+                        doc.setFont('helvetica', 'bold');
+                        doc.setTextColor(0, 0, 0);
+                        doc.text(String(tag.rak), x + tagWidth - 2, rakRowBottomY - 0.6, { align: 'right' });
+
+                        // ===== GARIS BIRU: PLU rata kiri, tanpa label =====
+                        doc.setFillColor(43, 108, 176);
+                        doc.rect(x, blueTopY, tagWidth, blueHeight, 'F');
+                        doc.setFontSize(isPanjang ? 7 : 6);
+                        doc.setFont('helvetica', 'bold');
+                        doc.setTextColor(0, 0, 0);
+                        doc.text(String(tag.plu), x + 2, blueTopY + blueHeight - (isPanjang ? 1.3 : 1));
+
+                        // ===== GARIS MERAH: retur kiri, tanggal cetak kanan, tanpa label =====
+                        doc.setFillColor(229, 62, 62);
+                        doc.rect(x, redTopY, tagWidth, redHeight, 'F');
+                        doc.setFontSize(isPanjang ? 6.5 : 5.5);
+                        doc.setFont('helvetica', 'bold');
+                        doc.setTextColor(0, 0, 0);
+                        doc.text(String(tag.retur), x + 2, redTopY + redHeight - (isPanjang ? 1.3 : 1));
+                        doc.text(String(tag.tanggal), x + tagWidth - 2, redTopY + redHeight - (isPanjang ? 1.3 : 1), { align: 'right' });
+
+                        // ===== AREA ATAS: NAMA, HARGA, BARCODE =====
+                        const contentTop = y + 1.5;
+                        const contentBottom = rakRowTopY - 0.5;
+
+                        // Nama
+                        doc.setFontSize(isPanjang ? 7 : 5.5);
+                        doc.setFont('helvetica', 'normal');
+                        doc.setTextColor(0, 0, 0);
+                        const namaMax = isPanjang ? 30 : 16;
+                        let nama = tag.nama;
+                        if (nama.length > namaMax) nama = nama.slice(0, namaMax) + '...';
+                        doc.text(nama, x + tagWidth / 2, contentTop + (isPanjang ? 3 : 3.5), { align: 'center' });
+
+                        // Harga + satuan (dibuat lebih dominan, satuan sedikit lebih kecil)
+                        // Posisinya tetap di antara Nama dan Barcode.
+                        doc.setFont('helvetica', 'bold');
+                        doc.setTextColor(0, 0, 0);
+                        const hargaFontSize = isPanjang ? 16 : 12.5;
+                        const satuanFontSize = hargaFontSize * 0.55;
+                        const angkaText = 'Rp. ' + this.formatAngka(tag.price);
+                        const satuanText = '/' + (tag.satuan || 'PCS');
+
+                        doc.setFontSize(hargaFontSize);
+                        const angkaWidth = doc.getTextWidth(angkaText);
+                        doc.setFontSize(satuanFontSize);
+                        const satuanWidth = doc.getTextWidth(satuanText);
+                        const hargaTotalWidth = angkaWidth + satuanWidth;
+
+                        const hargaY = contentTop + (isPanjang ? 9 : 10);
+                        const hargaStartX = x + tagWidth / 2 - hargaTotalWidth / 2;
+
+                        doc.setFontSize(hargaFontSize);
+                        doc.text(angkaText, hargaStartX, hargaY);
+                        doc.setFontSize(satuanFontSize);
+                        doc.text(satuanText, hargaStartX + angkaWidth, hargaY);
+
+                        // Barcode (scannable oleh alat scan kasir & kamera) - tepat di antara harga dan info bawah
+                        const barcodeY = hargaY + 1.5;
+                        const barcodeMaxHeight = Math.max(6, contentBottom - barcodeY - 1);
+                        try {
+                            const canvas = document.createElement('canvas');
+                            const barcodeValue = (tag.barcode && String(tag.barcode).trim())
+                                ? String(tag.barcode).trim()
+                                : String(tag.plu || '0');
+                            // Jangan paksa ukuran canvas di sini — biarkan JsBarcode yang menghitung
+                            // sendiri ukuran aslinya, baru nanti kita skalakan ke area PDF.
+                            JsBarcode(canvas, barcodeValue, {
+                                format: "CODE128",
+                                width: 2,
+                                height: 60,
+                                displayValue: true,
+                                fontSize: 18,
+                                margin: 6,
+                                background: "#ffffff",
+                                lineColor: "#000000"
+                            });
+                            const imgData = canvas.toDataURL('image/png');
+                            const aspectRatio = canvas.height / canvas.width;
+                            let imgWidth = tagWidth - 4;
+                            let imgHeight = imgWidth * aspectRatio;
+                            if (imgHeight > barcodeMaxHeight) {
+                                imgHeight = barcodeMaxHeight;
+                                imgWidth = imgHeight / aspectRatio;
+                            }
+                            const imgX = x + tagWidth / 2 - imgWidth / 2;
+                            doc.addImage(imgData, 'PNG', imgX, barcodeY, imgWidth, imgHeight);
+                        } catch(e) {
+                            console.error('Gagal membuat barcode visual:', e);
+                            doc.setFontSize(6);
+                            doc.setTextColor(0, 0, 0);
+                            doc.text(String(tag.barcode), x + tagWidth/2, barcodeY + 4, { align: 'center' });
+                        }
+                    }
+                }
+                
+                doc.save(`pricetag_${this.pricetagUkuran}_${new Date().toISOString().slice(0,10)}.pdf`);
+                this.showToast('📄 PDF pricetag siap!');
+            },
+
+            // ==================== STRUK ====================
+            addItem() {
+                const { barcode, deskripsi, qty, harga } = this.form;
+                if (!deskripsi || qty < 1 || harga <= 0) {
+                    this.showToast('⚠ Data tidak lengkap!');
+                    return;
+                }
+                this.items.push({
+                    barcode: barcode || '-',
+                    deskripsi: deskripsi,
+                    qty: qty,
+                    harga: harga,
+                    total: qty * harga
+                });
+                this.form.barcode = '';
+                this.form.deskripsi = '';
+                this.form.qty = 1;
+                this.form.harga = 0;
+                this.showToast('✔ Item ditambahkan');
+            },
+            removeItem(idx) {
+                this.items.splice(idx, 1);
+                this.showToast('Item dihapus');
+            },
+            updateQty(idx, delta) {
+                const item = this.items[idx];
+                const newQty = item.qty + delta;
+                if (newQty < 1) return;
+                item.qty = newQty;
+                item.total = item.qty * item.harga;
+            },
+            clearStruk() {
+                this.items = [];
+                this.discount = 0;
+                this.showToast('Struk dikosongkan');
+            },
+            searchProduct() {
+                const keyword = this.form.barcode.trim();
+                if (!keyword) return;
+                const product = this.products.find(p => 
+                    String(p.barcode).toLowerCase() === keyword.toLowerCase() ||
+                    String(p.plu).toLowerCase() === keyword.toLowerCase()
+                );
+                if (product) {
+                    this.form.deskripsi = product.desc || product.s_descp || '';
+                    this.form.harga = product.price1 || 0;
+                    if ((product.qty1 || 0) <= 0) this.showToast('⚠ Stok habis!');
+                }
+            },
+            printStruk() {
+                const content = this.strukText;
+                const win = window.open('', '_blank');
+                win.document.write(`
+                    <html><head><title>Struk ${this.settings.namaUsaha}</title>
+                    <style>body{font-family:'Courier New',monospace;padding:20px;background:white;display:flex;justify-content:center;align-items:center;min-height:100vh;}
+                    pre{white-space:pre-wrap;font-size:14px;max-width:320px;margin:0 auto;}
+                    @media print{body{padding:10px;}}</style>
+                    </head><body><pre>${content}</pre>
+                    <script>window.onload=function(){window.print();setTimeout(window.close,2000)};<\/script>
+                    </body></html>
+                `);
+                win.document.close();
+            },
+
+            // ==================== HISTORY ====================
+            async saveToHistory() {
+                if (this.items.length === 0) {
+                    this.showToast('⚠ Tidak ada item!');
+                    return;
+                }
+                
+                // Kurangi stok
+                this.items.forEach(item => {
+                    const product = this.products.find(p => 
+                        String(p.barcode) === String(item.barcode) ||
+                        String(p.plu) === String(item.barcode)
+                    );
+                    if (product) {
+                        product.qty1 = (product.qty1 || 0) - item.qty;
+                        if (product.qty1 < 0) product.qty1 = 0;
+                        this.saveProductToDB(product);
+                    }
+                });
+
+                const transaction = {
+                    tanggal: this.form.tanggal,
+                    items: JSON.parse(JSON.stringify(this.items)),
+                    grandTotal: this.grandTotalAfterDiscount,
+                    payment: this.paymentMethod,
+                    discount: this.discount,
+                    kasir: this.currentUser ? this.currentUser.nama : 'Salma',
+                    created_at: new Date().toISOString(),
+                    synced: false
+                };
+
+                await this.saveTransactionToDB(transaction);
+                await this.loadHistoryFromDB();
+                
+                // Tambah ke pending sync
+                await dbPut('pending', { 
+                    type: 'transaction',
+                    data: transaction,
+                    created_at: new Date().toISOString()
+                });
+                await this.loadPendingSync();
+
+                this.showToast('✔ Tersimpan ke history (offline)');
+                this.items = [];
+                this.discount = 0;
+                
+                // Update chart
+                this.initChart();
+            },
+            async deleteHistory(idx) {
+                const item = this.history[idx];
+                if (item && item.id) {
+                    await this.deleteTransactionFromDB(item.id);
+                    await this.loadHistoryFromDB();
+                    this.showToast('History dihapus');
+                }
+            },
+            async clearHistory() {
+                if (confirm('Hapus semua history?')) {
+                    await this.clearTransactionsDB();
+                    this.history = [];
+                    this.showToast('History cleared');
+                }
+            },
+
+            // ==================== LAPORAN ====================
+            generateLaporan() {
+                const start = this.laporanStart || '2000-01-01';
+                const end = this.laporanEnd || '2099-12-31';
+                const filtered = this.history.filter(h => h.tanggal >= start && h.tanggal <= end);
+                const totalPenjualan = filtered.reduce((sum, h) => sum + h.grandTotal, 0);
+                this.laporanData = {
+                    totalPenjualan: totalPenjualan,
+                    totalTransaksi: filtered.length,
+                    rataRata: filtered.length > 0 ? this.formatRupiah(totalPenjualan / filtered.length) : 'Rp 0',
+                    transaksi: filtered
+                };
+                this.showToast(`📊 Laporan ${filtered.length} transaksi`);
+            },
+            exportLaporanExcel() {
+                if (!this.laporanData || this.laporanData.transaksi.length === 0) {
+                    this.showToast('⚠ Tidak ada data');
+                    return;
+                }
+                const data = this.laporanData.transaksi.map((h, idx) => ({
+                    'No': idx + 1,
+                    'Tanggal': h.tanggal,
+                    'Kasir': h.kasir || '-',
+                    'Total': h.grandTotal,
+                    'Metode': h.payment || '-',
+                    'Item': h.items.length
+                }));
+                const ws = XLSX.utils.json_to_sheet(data);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Laporan');
+                XLSX.writeFile(wb, `laporan_${this.laporanStart}_${this.laporanEnd}.xlsx`);
+                this.showToast('📁 Excel siap');
+            },
+            exportLaporanPDF() {
+                if (!this.laporanData || this.laporanData.transaksi.length === 0) {
+                    this.showToast('⚠ Tidak ada data');
+                    return;
+                }
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF('p', 'mm', 'a4');
+                let y = 20;
+                doc.setFontSize(16);
+                doc.text('LAPORAN PENJUALAN', 14, y);
+                y += 8;
+                doc.setFontSize(11);
+                doc.text(`Periode: ${this.laporanStart} - ${this.laporanEnd}`, 14, y);
+                y += 6;
+                doc.text(`Total Transaksi: ${this.laporanData.totalTransaksi}`, 14, y);
+                y += 6;
+                doc.text(`Total Penjualan: ${this.formatRupiah(this.laporanData.totalPenjualan)}`, 14, y);
+                y += 10;
+                doc.setFontSize(8);
+                this.laporanData.transaksi.forEach(h => {
+                    if (y > 270) { doc.addPage(); y = 20; }
+                    doc.text(`${h.tanggal} | ${h.kasir || '-'} | ${this.formatRupiah(h.grandTotal)} | ${h.payment || '-'}`, 14, y);
+                    y += 5;
+                });
+                doc.save(`laporan_${this.laporanStart}_${this.laporanEnd}.pdf`);
+                this.showToast('📄 PDF siap');
+            },
+
+            // ==================== DATABASE EXPORT ====================
+            exportProductsExcel() {
+                if (this.products.length === 0) {
+                    this.showToast('⚠ Tidak ada data');
+                    return;
+                }
+                const data = this.products.map(p => ({
+                    plu: p.plu,
+                    desc: p.desc,
+                    s_descp: p.s_descp,
+                    barcode: p.barcode,
+                    kategori: p.kategori,
+                    price1: p.price1,
+                    price2: p.price2,
+                    price3: p.price3,
+                    qty1: p.qty1,
+                    qty2: p.qty2,
+                    qty3: p.qty3,
+                    lokasi_rak: p.lokasi_rak,
+                    retur_hari: p.retur_hari || 0
+                }));
+                const ws = XLSX.utils.json_to_sheet(data);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Produk');
+                XLSX.writeFile(wb, `produk_${new Date().toISOString().slice(0,10)}.xlsx`);
+                this.showToast('📁 Excel produk siap');
+            },
+
+            // ==================== CLEAR PRODUCTS ====================
+            async clearProducts() {
+                if (confirm('Hapus semua data produk dari database?')) {
+                    await this.clearProductsDB();
+                    this.products = [];
+                    this.showToast('Database produk dihapus');
+                }
+            },
+
+            // ==================== RESET ====================
+            resetAll() {
+                if (confirm('Reset semua data?')) {
+                    this.items = [];
+                    this.discount = 0;
+                    this.paymentMethod = 'Tunai';
+                    this.scanHistory = [];
+                    this.generatedPricetags = [];
+                    this.scannedProduct = null;
+                    this.foundProduct = null;
+                    this.showToast('Reset selesai');
+                }
+            },
+
+            // ==================== NETWORK STATUS ====================
+            checkNetwork() {
+                const online = navigator.onLine;
+                if (online) {
+                    this.networkStatus = { label: 'Online', class: 'online', icon: 'fas fa-wifi' };
+                    // Coba sync
+                    this.syncPending();
+                } else {
+                    this.networkStatus = { label: 'Offline', class: 'offline', icon: 'fas fa-wifi-slash' };
+                }
+            },
+
+            async syncPending() {
+                if (!navigator.onLine) return;
+                try {
+                    const pending = await dbGetAll('pending');
+                    if (pending.length === 0) {
+                        this.pendingSyncCount = 0;
                         return;
                     }
+                    this.networkStatus = { label: 'Sync...', class: 'sync', icon: 'fas fa-sync fa-spin' };
+                    
+                    // Di sini nanti integrasi Google Sheet
+                    // Untuk sekarang, kita anggap sukses dan hapus pending
+                    for (const item of pending) {
+                        await dbDelete('pending', item.id);
+                    }
+                    this.pendingSyncCount = 0;
+                    this.networkStatus = { label: 'Online', class: 'online', icon: 'fas fa-wifi' };
+                    this.showToast(`✅ ${pending.length} data tersinkronisasi`);
+                } catch(e) {
+                    console.error('Sync error:', e);
+                    this.networkStatus = { label: 'Sync Gagal', class: 'offline', icon: 'fas fa-exclamation-triangle' };
+                }
+            },
 
-                    // Standarisasi Nama Kolom (Kebal Huruf Besar/Kecil)
-                    masterData = rawData.map(row => {
-                        const normalizedRow = {};
-                        // Cari kunci kolom secara fleksibel
-                        for (let key in row) {
-                            const lowerKey = key.trim().toLowerCase();
-                            if (lowerKey === 'plu' || lowerKey === 'kode plu' || lowerKey === 'kode_plu') {
-                                normalizedRow.plu = row[key];
-                            } else if (lowerKey === 'barcode' || lowerKey === 'no_barcode' || lowerKey === 'no barcode') {
-                                normalizedRow.barcode = row[key];
-                            } else if (lowerKey === 'descp' || lowerKey === 'deskripsi' || lowerKey === 'nama barang' || lowerKey === 'nama_barang') {
-                                normalizedRow.descp = row[key];
-                            } else if (lowerKey === 'price1' || lowerKey === 'harga' || lowerKey === 'price') {
-                                normalizedRow.price1 = row[key];
-                            } else if (lowerKey === 'kategori' || lowerKey === 'category') {
-                                normalizedRow.kategori = row[key];
+            // ==================== TOAST ====================
+            showToast(msg) {
+                this.toastMessage = msg;
+                const el = document.getElementById('toast');
+                el.classList.add('show');
+                clearTimeout(this._toastTimeout);
+                this._toastTimeout = setTimeout(() => {
+                    el.classList.remove('show');
+                }, 3000);
+            },
+
+            // ==================== CHART ====================
+            initChart() {
+                const ctx = document.getElementById('salesChart');
+                if (!ctx) return;
+                const labels = [];
+                const data = [];
+                for (let i = 6; i >= 0; i--) {
+                    const d = new Date();
+                    d.setDate(d.getDate() - i);
+                    const dateStr = d.toISOString().slice(0, 10);
+                    labels.push(dateStr);
+                    const total = this.history
+                        .filter(h => h.tanggal === dateStr)
+                        .reduce((sum, h) => sum + h.grandTotal, 0);
+                    data.push(total);
+                }
+                if (this.salesChart) this.salesChart.destroy();
+                this.salesChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Penjualan (Rp)',
+                            data: data,
+                            backgroundColor: 'rgba(49, 130, 206, 0.6)',
+                            borderColor: '#3182ce',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: { callback: function(value) { return 'Rp ' + value.toLocaleString('id-ID'); } }
                             }
                         }
-                        return normalizedRow;
-                    });
-
-                    // Pastikan minimal ada kolom barcode atau plu yang berhasil terbaca
-                    if(masterData.length > 0 && (masterData[0].barcode || masterData[0].plu)) {
-                        totalItems.innerText = masterData.length;
-                        statusMasterLoad.classList.remove('hidden');
-                        interactionSection.classList.remove('opacity-40', 'pointer-events-none');
-                        excelInput.disabled = true;
-                        
-                        appStatus.innerText = "Dashboard Siap Entry";
-                        appStatus.className = "text-green-600 font-bold";
-                        btnClearAll.classList.remove('hidden');
-                        
-                        // Aktifkan Kamera Scanner Laptop/HP
-                        startScanner();
-                    } else {
-                        alert('Gagal memetakan data. Pastikan file Excel Anda memiliki judul kolom seperti: "PLU", "Barcode", dan "Deskripsi" / "Descp" di baris pertama.');
                     }
-
-                } catch (error) {
-                    console.error(error);
-                    alert('Terjadi kesalahan saat membaca file Excel: ' + error.message);
-                }
-            };
-            reader.readAsArrayBuffer(file);
-        });
-
-        // --- 2. FITUR SCANNER KAMERA KOMPATIBILITAS MAKSIMAL (FIX HP & LAPTOP) ---
-        let html5QrcodeInstance = null;
-
-        function startScanner() {
-            // Jika instance lama masih ada atau aktif, hentikan dulu
-            if (html5QrcodeInstance) {
-                html5QrcodeInstance.stop().catch(() => {});
+                });
             }
+        },
 
-            // Inisialisasi ulang ke elemen 'reader'
-            html5QrcodeInstance = new Html5Qrcode("reader");
-
-            // Konfigurasi dibuat super ringan agar browser HP tidak menolak
-            const config = {
-                fps: 10,
-                qrbox: { width: 250, height: 150 } // Menggunakan ukuran statis (paling aman untuk semua browser)
-            };
-
-            // LANGKAH A: Coba minta daftar kamera yang tersedia di perangkat dahulu
-            Html5Qrcode.getCameras().then(devices => {
-                if (devices && devices.length > 0) {
-                    // Cari apakah ada kamera belakang (back / rear / environment)
-                    let targetCameraId = devices[0].id; // Default pakai kamera pertama yang ditemukan
-                    
-                    for (let i = 0; i < devices.length; i++) {
-                        const label = devices[i].label.toLowerCase();
-                        if (label.includes('back') || label.includes('rear') || label.includes('belakang') || label.includes('environment')) {
-                            targetCameraId = devices[i].id;
-                            break; // Prioritaskan kamera belakang untuk HP
-                        }
-                    }
-
-                    // Jalankan kamera berdasarkan ID yang sudah divalidasi sistem
-                    html5QrcodeInstance.start(
-                        targetCameraId, 
-                        config,
-                        onScanSuccess,
-                        onScanFailure
-                    ).catch(err => {
-                        console.error("Gagal start kamera spesifik:", err);
-                        fallbackDefaultCamera(config);
-                    });
-                } else {
-                    // Jika devices kosong, gunakan opsi default universal
-                    fallbackDefaultCamera(config);
+        watch: {
+            history() { this.initChart(); },
+            activeTab(newTab, oldTab) {
+                // Matikan kamera pricetag otomatis saat pindah tab, supaya hemat baterai
+                if (oldTab === 'pricetag' && this.isPricetagCameraOn) {
+                    this.stopPricetagCamera();
                 }
-            }).catch(err => {
-                console.error("Gagal mendeteksi daftar kamera:", err);
-                fallbackDefaultCamera(config);
-            });
-        }
+            }
+        },
 
-        // Jalur Cadangan Universal jika deteksi ID kamera gagal
-        function fallbackDefaultCamera(config) {
-            html5QrcodeInstance.start(
-                { facingMode: "environment" }, 
-                config,
-                onScanSuccess,
-                onScanFailure
-            ).catch(err => {
-                document.getElementById('reader').innerHTML = `
-                    <div class="text-center p-4 text-xs text-red-500 font-medium">
-                        Gagal mengaktifkan kamera: ${err.message || 'Izin Diblokir/Digunakan Aplikasi Lain'}<br>
-                        Silakan gunakan input manual di bawah.
-                    </div>
-                `;
-            });
-        }
-
-        function onScanSuccess(decodedText) {
-            handleProductLookup(decodedText);
-            if (navigator.vibrate) navigator.vibrate(100); 
-        }
-
-        function onScanFailure(error) {
-            // Dibiarkan kosong agar frame scanning terus berjalan lancar
-        }
-        // --- 3. LOGIKA LOOKUP / PENCARIAN PRODUK ---
-        function handleProductLookup(barcodeOrPlu) {
-            const searchKey = String(barcodeOrPlu).trim().toLowerCase();
+        async mounted() {
+            this.loadUser();
+            this.loadSettings();
+            this.loadUserNames();
+            await this.loadProductsFromDB();
+            await this.loadHistoryFromDB();
+            await this.loadPendingSync();
             
-            const product = masterData.find(item => {
-                const itemBarcode = item.barcode ? String(item.barcode).trim().toLowerCase() : '';
-                const itemPlu = item.plu ? String(item.plu).trim().toLowerCase() : '';
-                return itemBarcode === searchKey || itemPlu === searchKey;
-            });
-
-            if(product) {
-                currentActiveProduct = product;
-                
-                entryFormSection.classList.remove('hidden');
-                entryDescp.innerText = product.descp || 'Tanpa Deskripsi';
-                entryPlu.innerText = product.plu || '-';
-                entryBarcode.innerText = product.barcode || '-';
-                
-                const harga = !isNaN(product.price1) ? 'Rp ' + Number(product.price1).toLocaleString('id-ID') : (product.price1 || '0');
-                entryInfo.innerText = `${product.kategori || 'Umum'} / ${harga}`;
-                
-                returQty.value = '';
-                returExp.value = '';
-                returQty.focus();
-                
-                entryFormSection.scrollIntoView({ behavior: 'smooth' });
-            } else {
-                alert(`Produk dengan Barcode/PLU "${barcodeOrPlu}" tidak ditemukan dalam Master Data.`);
-            }
+            const today = new Date().toISOString().slice(0, 10);
+            this.form.tanggal = today;
+            this.laporanStart = today;
+            this.laporanEnd = today;
+            
+            // Network status
+            this.checkNetwork();
+            window.addEventListener('online', () => { this.checkNetwork(); });
+            window.addEventListener('offline', () => { this.checkNetwork(); });
+            
+            setTimeout(() => this.initChart(), 500);
+            
+            // Auto sync setiap 30 detik
+            setInterval(() => {
+                if (navigator.onLine) this.syncPending();
+            }, 30000);
         }
-
-        btnLookup.addEventListener('click', () => {
-            if(manualBarcode.value.trim() !== "") handleProductLookup(manualBarcode.value);
-        });
-        manualBarcode.addEventListener('keypress', (e) => {
-            if(e.key === 'Enter' && manualBarcode.value.trim() !== "") handleProductLookup(manualBarcode.value);
-        });
-
-        btnCancelEntry.addEventListener('click', () => {
-            entryFormSection.classList.add('hidden');
-            currentActiveProduct = null;
-        });
-
-        // --- 4. DATA ENTRY: SIMPAN ITEM KE DAFTAR KERJA ---
-        btnSaveEntry.addEventListener('click', () => {
-            const qty = parseInt(returQty.value);
-            const expiredDate = returExp.value;
-
-            if(!qty || qty <= 0) {
-                alert('Silakan isi jumlah Qty retur dengan benar (Minimal 1).');
-                returQty.focus();
-                return;
-            }
-            if(!expiredDate) {
-                alert('Silakan masukkan tanggal kedaluwarsa produk.');
-                returExp.focus();
-                return;
-            }
-
-            const returItem = {
-                plu: currentActiveProduct.plu,
-                barcode: currentActiveProduct.barcode,
-                descp: currentActiveProduct.descp,
-                qty_retur: qty,
-                tgl_expired: expiredDate
-            };
-
-            returList.push(returItem);
-            renderReturTable();
-
-            entryFormSection.classList.add('hidden');
-            manualBarcode.value = '';
-            currentActiveProduct = null;
-        });
-
-        function renderReturTable() {
-            if(returList.length === 0) {
-                returTableBody.innerHTML = `
-                    <tr>
-                        <td colspan="6" class="p-8 text-center text-gray-400 italic">Belum ada item yang ditambahkan. Silakan unggah master data lalu scan barcode produk.</td>
-                    </tr>
-                `;
-                btnExport.classList.add('hidden');
-                return;
-            }
-
-            btnExport.classList.remove('hidden');
-            returTableBody.innerHTML = '';
-
-            returList.forEach((item, index) => {
-                const tr = document.createElement('tr');
-                tr.className = "border-b border-gray-100 hover:bg-gray-50 transition";
-                tr.innerHTML = `
-                    <td class="p-3 font-mono text-gray-700">${item.plu || '-'}</td>
-                    <td class="p-3 font-mono text-gray-600">${item.barcode || '-'}</td>
-                    <td class="p-3 font-medium text-gray-900">${item.descp || '-'}</td>
-                    <td class="p-3 text-center font-bold text-indigo-600 text-sm">${item.qty_retur}</td>
-                    <td class="p-3 text-gray-600">${item.tgl_expired}</td>
-                    <td class="p-3 text-center">
-                        <button onclick="deleteReturItem(${index})" class="text-red-500 hover:text-red-700 font-semibold cursor-pointer">Hapus</button>
-                    </td>
-                `;
-                returTableBody.appendChild(tr);
-            });
-        }
-
-        function deleteReturItem(index) {
-            returList.splice(index, 1);
-            renderReturTable();
-        }
-
-        // --- 5. EXPORT DAFTAR RETUR MENJADI FILE EXCEL ---
-        btnExport.addEventListener('click', () => {
-            if(returList.length === 0) return;
-
-            const dataToExport = returList.map((item, idx) => ({
-                "No": idx + 1,
-                "Kode PLU": item.plu,
-                "Barcode": item.barcode,
-                "Deskripsi Produk": item.descp,
-                "Qty Retur": item.qty_retur,
-                "Tanggal Kedaluwarsa (Expired)": item.tgl_expired
-            }));
-
-            const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "Laporan Retur Supplier");
-
-            const max_width = dataToExport.reduce((w, r) => Math.max(w, String(r["Deskripsi Produk"]).length), 20);
-            worksheet["!cols"] = [
-                { wch: 5 }, { wch: 12 }, { wch: 18 }, { wch: max_width }, { wch: 12 }, { wch: 25 }
-            ];
-
-            const tanggalHariIni = new Date().toISOString().split('T')[0];
-            const namaFile = `Laporan_Kerja_Retur_${tanggalHariIni}.xlsx`;
-
-            XLSX.writeFile(workbook, namaFile);
-        });
-
-        // --- 6. RESET TOTAL (CLEAR DATA) ---
-        btnClearAll.addEventListener('click', () => {
-            if(confirm('Apakah Anda yakin ingin menghapus semua data entry dan mereset aplikasi dari awal?')) {
-                if (html5QrcodeScanner) {
-                    html5QrcodeScanner.clear().catch(err => console.log(err));
-                }
-                
-                masterData = [];
-                returList = [];
-                currentActiveProduct = null;
-                excelInput.value = '';
-                excelInput.disabled = false;
-                manualBarcode.value = '';
-                
-                statusMasterLoad.classList.add('hidden');
-                entryFormSection.classList.add('hidden');
-                btnClearAll.classList.add('hidden');
-                
-                appStatus.innerText = "Belum Ada Master Data";
-                appStatus.className = "text-red-500 font-bold";
-                
-                renderReturTable();
-            }
-        });
-    </script>
-    
-    
+    });
+</script>
 </body>
 </html>
