@@ -2179,30 +2179,49 @@
     },
     onPricetagCameraScan(decodedText) {
         const now = Date.now();
-        if (decodedText === this.pricetagCamLastCode && now < this.pricetagCamCooldownUntil) return;
-        this.pricetagCamLastCode = decodedText;
-        this.pricetagCamCooldownUntil = now + 2000;
+        const cleanCode = String(decodedText || '').trim();
+        if (!cleanCode) return;
+        // cegah double scan beruntun barcode sama
+        if (cleanCode === this.pricetagCamLastCode && now < this.pricetagCamCooldownUntil) return;
+        this.pricetagCamLastCode = cleanCode;
+        this.pricetagCamCooldownUntil = now + 1500;
 
-        let product = this.products.find(p =>
-            String(p.barcode).toLowerCase() === decodedText.toLowerCase()
-        );
-        if (!product) {
-            product = this.products.find(p =>
-                String(p.plu).toLowerCase() === decodedText.toLowerCase()
-            );
-        }
+        // Cari produk - toleran leading zero & case
+        let product = this.products.find(p => {
+            const bc = String(p.barcode || '').trim().toLowerCase();
+            const plu = String(p.plu || '').trim().toLowerCase();
+            const target = cleanCode.toLowerCase();
+            return bc === target || plu === target || bc.replace(/^0+/, '') === target.replace(/^0+/, '');
+        });
         
         if (product) {
             const tag = this.buildTagFromProduct(product);
+            // 1. Masukkan ke list items (agar textarea lomagInput terisi)
             this.pricetagItems.push(tag);
             this.lomagInput = this.pricetagItems.map(i => i.barcode).join('\n');
-            this.showToast(`✅ ${tag.name} ditambahkan ke pricetag`);
-            this.generatePricetagsFromItems();
+            // 2. FIX UTAMA: Langsung masukkan juga ke generatedPricetags (jendela cetak)
+            //    Biar kamera scan langsung muncul di preview tanpa harus klik Generate lagi
+            for (let i = 0; i < this.pricetagQty; i++) {
+                this.generatedPricetags.push({
+                    ...tag,
+                    id: Date.now() + '_' + Math.random().toString(36).substr(2, 5) + '_' + i
+                });
+            }
+            this.showToast(`✅ ${tag.name} ditambahkan ke pricetag (${this.generatedPricetags.length} total)`);
+            // 3. Render barcode secara paksa setelah DOM update
+            this.$nextTick(() => {
+                this.renderBarcodes();
+                // scroll preview ke bawah biar kelihatan hasil scan baru
+                const container = document.getElementById('pricetagContainer');
+                if (container) container.scrollTop = container.scrollHeight;
+            });
             setTimeout(() => {
                 this.pricetagCamLastCode = '';
-            }, 1000);
+            }, 1200);
         } else {
-            this.showToast(`⚠ Barcode ${decodedText} tidak ditemukan di database`);
+            this.showToast(`⚠ Barcode ${cleanCode} tidak ditemukan di database`);
+            // tetap clear cooldown biar bisa scan barcode lain langsung
+            setTimeout(() => { this.pricetagCamLastCode = ''; }, 800);
         }
     },
     openPricetagScanner() {
