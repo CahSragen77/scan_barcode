@@ -340,7 +340,6 @@
         .product-info .value { font-weight: 700; color: #1a202c; font-size: 13px; }
         .product-info .value.price { color: #38a169; font-size: 16px; }
 
-        /* ===== PRICETAG NEW STYLES ===== */
         /* ===== PRICETAG NEW FIXED STYLES ===== */
 .pricetag-preview {
     background: white;
@@ -1834,6 +1833,19 @@
                         this.onScanSuccess,
                         this.onScanError
                     );
+
+                    addScannedToPricetag() {
+    if (!this.scannedProduct) return;
+    const product = this.scannedProduct;
+    const tag = this.buildTagFromProduct(product);
+    this.pricetagItems.push(tag);
+    this.lomagInput = this.pricetagItems.map(i => i.barcode).join('\n');
+    this.showToast(`✅ ${tag.name} ditambahkan ke pricetag`);
+    this.activeTab = 'pricetag';
+    this.generatePricetagsFromItems();
+},
+
+                    
                     this.isScanning = true;
                     this.showToast('📷 Scanner aktif!');
                 } catch (err) {
@@ -1887,18 +1899,7 @@
                 this.activeTab = 'struk';
             },
             
-            addScannedToPricetag() {
-    if (!this.scannedProduct) return;
-    const product = this.scannedProduct;
-    const tag = this.buildTagFromProduct(product);
-    this.pricetagItems.push(tag);
-    this.lomagInput = this.pricetagItems.map(i => i.barcode).join('\n');
-    this.showToast(`✅ ${tag.name} ditambahkan ke pricetag`);
-    this.activeTab = 'pricetag';
-    this.generatePricetagsFromItems();
-},
-
-            // ========== PRICETAG FUNCTIONS ==========
+            
             // ========== PRICETAG FUNCTIONS ==========
 formatReturText(returHari) {
     if (!returHari || returHari === 0 || returHari === '0' || returHari === '') return 'NO RETUR';
@@ -2142,17 +2143,15 @@ uploadLomagFile() {
                     await this.startPricetagCamera();
                 }
             },
-            
+
             async startPricetagCamera() {
     try {
-        // Pastikan container sudah ada di DOM
         const container = document.getElementById('scanner-pricetag');
         if (!container) {
             this.showToast('⚠ Container kamera tidak ditemukan');
             return;
         }
         
-        // Bersihkan container terlebih dahulu
         container.innerHTML = '';
         container.style.display = 'block';
         container.style.minHeight = '250px';
@@ -2160,10 +2159,8 @@ uploadLomagFile() {
         container.style.borderRadius = '12px';
         container.style.overflow = 'hidden';
         
-        // Inisialisasi scanner
         this.pricetagQrCode = new Html5Qrcode("scanner-pricetag");
         
-        // Mulai kamera
         await this.pricetagQrCode.start(
             { facingMode: "environment" },
             { 
@@ -2171,10 +2168,10 @@ uploadLomagFile() {
                 qrbox: { width: 220, height: 220 }, 
                 aspectRatio: 1.0 
             },
-            this.onPricetagCameraScan,
+            // PASTIKAN INI MENGGUNAKAN BIND
+            this.onPricetagCameraScan.bind(this),
             (error) => {
                 // Abaikan error scanning biasa
-                // console.log('Scan error:', error);
             }
         );
         
@@ -2187,6 +2184,7 @@ uploadLomagFile() {
         this.showToast('⚠ Gagal akses kamera: ' + err.message);
     }
 },
+           
             
             
             async stopPricetagCamera() {
@@ -2217,9 +2215,12 @@ uploadLomagFile() {
     this.pricetagCamLastCode = decodedText;
     this.pricetagCamCooldownUntil = now + 2000;
 
+    // Cari produk berdasarkan barcode
     let product = this.products.find(p =>
         String(p.barcode).toLowerCase() === decodedText.toLowerCase()
     );
+    
+    // Jika tidak ditemukan, cari berdasarkan PLU
     if (!product) {
         product = this.products.find(p =>
             String(p.plu).toLowerCase() === decodedText.toLowerCase()
@@ -2227,13 +2228,28 @@ uploadLomagFile() {
     }
     
     if (product) {
+        // Buat tag dari produk
         const tag = this.buildTagFromProduct(product);
+        
+        // Tambahkan ke daftar pricetagItems
         this.pricetagItems.push(tag);
+        
+        // Update textarea dengan semua barcode
         this.lomagInput = this.pricetagItems.map(i => i.barcode).join('\n');
-        this.showToast(`✅ ${tag.name} ditambahkan`);
+        
+        // Tampilkan notifikasi
+        this.showToast(`✅ ${tag.name} ditambahkan ke pricetag`);
+        
+        // Generate pricetag
         this.generatePricetagsFromItems();
+        
+        // Reset last code agar bisa scan barcode berikutnya
+        setTimeout(() => {
+            this.pricetagCamLastCode = '';
+        }, 1000);
+        
     } else {
-        this.showToast(`⚠ Barcode ${decodedText} tidak ditemukan`);
+        this.showToast(`⚠ Barcode ${decodedText} tidak ditemukan di database`);
     }
 },
 
