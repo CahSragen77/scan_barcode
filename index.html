@@ -1136,161 +1136,168 @@
             </div>
         </div>
 
+
         <!-- ========== PRICETAG (NEW VERSION) ========== -->
-        <div class="tab-content" :class="{ active: activeTab === 'pricetag' }">
-            <div class="grid-2">
-                <div>
-                    <!-- INPUT BARCODE / LOMAG -->
-                    <div class="card">
-                        <h3><i class="fas fa-barcode"></i> Input Barcode / Lomag</h3>
-                        <p class="text-muted" style="margin-top:-4px; margin-bottom:8px; font-size:12px;">
-                            Tempel atau ketik barcode (satu per baris), atau scan dengan kamera.
-                        </p>
-                        <div class="form-group">
-                            <textarea id="lomag-textarea" rows="4" v-model="lomagInput" 
-                                placeholder="0745604688550&#10;8993496110587" 
-                                class="font-mono text-sm"></textarea>
-                        </div>
-                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                            <button class="btn btn-primary" @click="processLomagInput">
-                                <i class="fas fa-bolt"></i> Proses Import
-                            </button>
-                            <button class="btn btn-ghost" @click="clearPricetagItems">
-                                <i class="fas fa-eraser"></i> Bersihkan
-                            </button>
-                            <button class="btn btn-purple" @click="openPricetagScanner">
-                                <i class="fas fa-camera"></i> Scan Kamera
-                            </button>
-                        </div>
-                        <div v-if="lomagResult" class="lomag-result" :class="lomagResult.found > 0 ? 'success' : 'fail'" style="margin-top:8px;">
-                            <i class="fas" :class="lomagResult.found > 0 ? 'fa-check-circle' : 'fa-exclamation-circle'"></i>
-                            <span v-if="lomagResult.found > 0">✅ {{ lomagResult.found }} pricetag ditambahkan</span>
-                            <span v-if="lomagResult.notFound > 0" style="margin-left:8px; color:#e53e3e;">
-                                ⚠ {{ lomagResult.notFound }} barcode tidak ditemukan
-                            </span>
-                            <span v-if="lomagResult.found === 0 && lomagResult.notFound === 0" style="color:#e53e3e;">
-                                Tidak ada data yang diproses
-                            </span>
-                        </div>
-                    </div>
-
-                    <!-- UPLOAD EXCEL -->
-                    <div class="card">
-                        <h3><i class="fas fa-file-excel"></i> Upload Excel / Lomag File</h3>
-                        <p class="text-muted" style="margin-top:-4px; margin-bottom:8px; font-size:12px;">
-                            Upload file Excel atau TXT dari Lomag (format: barcode per baris).
-                        </p>
-                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                            <input type="file" id="lomag-file-input" accept=".xlsx,.xls,.txt,.csv" style="flex:1; padding:6px;" />
-                            <button class="btn btn-success" @click="uploadLomagFile">
-                                <i class="fas fa-file-upload"></i> Upload
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- OPSI PRICETAG -->
-                    <div class="card">
-                        <h3><i class="fas fa-sliders-h"></i> Opsi Price Tag</h3>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Ukuran</label>
-                                <select v-model="pricetagUkuran">
-                                    <option value="panjang">Panjang (6.4×3.5 cm)</option>
-                                    <option value="pendek">Pendek (3.9×3.5 cm)</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Jumlah Copy</label>
-                                <div class="qty-control">
-                                    <button @click="pricetagQty = Math.max(1, pricetagQty - 1)">-</button>
-                                    <span>{{ pricetagQty }}</span>
-                                    <button @click="pricetagQty = pricetagQty + 1">+</button>
-                                </div>
-                            </div>
-                        </div>
-                        <button class="btn btn-primary" style="width:100%; margin-top:6px;" @click="generatePricetagsFromItems" :disabled="pricetagItems.length === 0">
-                            <i class="fas fa-sync"></i> Generate Price Tags
-                        </button>
-                    </div>
-
-                    <!-- KAMERA PRICETAG -->
-                    <div class="card">
-                        <h3><i class="fas fa-camera"></i> Kamera Otomatis</h3>
-                        <p class="text-muted" style="margin-top:-4px; margin-bottom:8px; font-size:12px;">
-                            Arahkan ke barcode, pricetag otomatis dibuat.
-                        </p>
-                        <div id="scanner-pricetag" v-show="isPricetagCameraOn"></div>
-                        <button class="btn" :class="isPricetagCameraOn ? 'btn-danger' : 'btn-success'" style="width:100%; margin-top:8px;" @click="togglePricetagCamera">
-                            <i class="fas" :class="isPricetagCameraOn ? 'fa-video-slash' : 'fa-video'"></i>
-                            {{ isPricetagCameraOn ? 'Matikan Kamera' : 'Nyalakan Kamera' }}
-                        </button>
-                        <span class="badge badge-blue" style="margin-top:6px; display:inline-block;" v-if="isPricetagCameraOn">Kamera Aktif</span>
-                    </div>
+<div class="tab-content" :class="{ active: activeTab === 'pricetag' }">
+    <div class="grid-2">
+        <!-- KOLOM KIRI -->
+        <div>
+            <!-- INPUT BARCODE / LOMAG -->
+            <div class="card">
+                <h3><i class="fas fa-barcode"></i> Input Barcode / Lomag</h3>
+                <p class="text-muted" style="margin-top:-4px; margin-bottom:8px; font-size:12px;">
+                    Tempel atau ketik barcode (satu per baris), atau scan dengan kamera.
+                </p>
+                <div class="form-group">
+                    <textarea id="lomag-textarea" rows="4" v-model="lomagInput" 
+                        placeholder="0745604688550&#10;8993496110587" 
+                        class="font-mono text-sm"></textarea>
                 </div>
-
-                <div>
-                    <!-- PREVIEW PRICETAG -->
-                    <!-- PREVIEW PRICETAG -->
-<div class="card">
-    <h3><i class="fas fa-eye"></i> Preview Price Tags</h3>
-    <div class="pricetag-grid" id="pricetagContainer">
-        <div v-for="(tag, idx) in generatedPricetags" :key="idx" 
-             class="pricetag-preview" 
-             :class="pricetagUkuran">
-            <div class="tag-content">
-                <!-- BODY: NAMA & HARGA (RATA KIRI) -->
-                <div class="tag-body">
-                    <div class="nama">{{ tag.name }}</div>
-                    <div class="harga">Rp. {{ formatAngka(tag.price) }}<span class="satuan">/{{ tag.satuan || 'PCS' }}</span></div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                    <button class="btn btn-primary" @click="processLomagInput">
+                        <i class="fas fa-bolt"></i> Proses Import
+                    </button>
+                    <button class="btn btn-ghost" @click="clearPricetagItems">
+                        <i class="fas fa-eraser"></i> Bersihkan
+                    </button>
+                    <button class="btn btn-purple" @click="openPricetagScanner">
+                        <i class="fas fa-camera"></i> Scan Kamera
+                    </button>
                 </div>
-
-                <!-- BARCODE VISUAL (FULL WIDTH) -->
-                <div class="tag-barcode-wrap">
-                    <svg :id="'barcode-' + idx"></svg>
-                </div>
-
-                <!-- ANGKA BARCODE -->
-                <div class="tag-barcode-angka">{{ tag.barcode }}</div>
-
-                <!-- FOOTER: PLU (BIRU) | RETUR + TANGGAL (MERAH) -->
-                <div class="tag-footer">
-                    <div class="line-blue">
-                        <span>{{ tag.plu }}</span>
-                        <span class="rak-text">{{ tag.rak }}</span>
-                    </div>
-                    <div class="gap-1"></div>
-                    <div class="line-red">
-                        <span class="retur-text">{{ tag.retur }}</span>
-                        <span class="tanggal-text">{{ tag.tanggal }}</span>
-                    </div>
-                    <div class="gap-2"></div>
+                <div v-if="lomagResult" class="lomag-result" :class="lomagResult.found > 0 ? 'success' : 'fail'" style="margin-top:8px;">
+                    <i class="fas" :class="lomagResult.found > 0 ? 'fa-check-circle' : 'fa-exclamation-circle'"></i>
+                    <span v-if="lomagResult.found > 0">✅ {{ lomagResult.found }} pricetag ditambahkan</span>
+                    <span v-if="lomagResult.notFound > 0" style="margin-left:8px; color:#e53e3e;">
+                        ⚠ {{ lomagResult.notFound }} barcode tidak ditemukan
+                    </span>
+                    <span v-if="lomagResult.found === 0 && lomagResult.notFound === 0" style="color:#e53e3e;">
+                        Tidak ada data yang diproses
+                    </span>
                 </div>
             </div>
+
+            <!-- UPLOAD EXCEL -->
+            <div class="card">
+                <h3><i class="fas fa-file-excel"></i> Upload Excel / Lomag File</h3>
+                <p class="text-muted" style="margin-top:-4px; margin-bottom:8px; font-size:12px;">
+                    Upload file Excel atau TXT dari Lomag (format: barcode per baris).
+                </p>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                    <input type="file" id="lomag-file-input" accept=".xlsx,.xls,.txt,.csv" style="flex:1; padding:6px;" />
+                    <button class="btn btn-success" @click="uploadLomagFile">
+                        <i class="fas fa-file-upload"></i> Upload
+                    </button>
+                </div>
+            </div>
+
+            <!-- OPSI PRICETAG -->
+            <div class="card">
+                <h3><i class="fas fa-sliders-h"></i> Opsi Price Tag</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Ukuran</label>
+                        <select v-model="pricetagUkuran">
+                            <option value="panjang">Panjang (6.4×3.5 cm)</option>
+                            <option value="pendek">Pendek (3.9×3.5 cm)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Jumlah Copy</label>
+                        <div class="qty-control">
+                            <button @click="pricetagQty = Math.max(1, pricetagQty - 1)">-</button>
+                            <span>{{ pricetagQty }}</span>
+                            <button @click="pricetagQty = pricetagQty + 1">+</button>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn btn-primary" style="width:100%; margin-top:6px;" @click="generatePricetagsFromItems" :disabled="pricetagItems.length === 0">
+                    <i class="fas fa-sync"></i> Generate Price Tags
+                </button>
+            </div>
+
+            <!-- KAMERA PRICETAG -->
+            <div class="card">
+                <h3><i class="fas fa-camera"></i> Kamera Otomatis</h3>
+                <p class="text-muted" style="margin-top:-4px; margin-bottom:8px; font-size:12px;">
+                    Arahkan ke barcode, pricetag otomatis dibuat.
+                </p>
+                <div id="scanner-pricetag" v-show="isPricetagCameraOn">
+                    <div class="scanner-overlay" v-if="isPricetagCameraOn"></div>
+                    <div class="scanner-line" v-if="isPricetagCameraOn"></div>
+                </div>
+                <button class="btn" :class="isPricetagCameraOn ? 'btn-danger' : 'btn-success'" style="width:100%; margin-top:8px;" @click="togglePricetagCamera">
+                    <i class="fas" :class="isPricetagCameraOn ? 'fa-video-slash' : 'fa-video'"></i>
+                    {{ isPricetagCameraOn ? 'Matikan Kamera' : 'Nyalakan Kamera' }}
+                </button>
+                <span class="badge badge-blue" style="margin-top:6px; display:inline-block;" v-if="isPricetagCameraOn">Kamera Aktif</span>
+            </div>
         </div>
-        <div v-if="generatedPricetags.length === 0" class="empty-state" style="grid-column:1/-1;">
-            <i class="fas fa-tag" style="font-size:32px; color:#a0aec0;"></i>
-            <p>Masukkan barcode dan klik Generate</p>
+
+        <!-- KOLOM KANAN -->
+        <div>
+            <!-- PREVIEW PRICETAG -->
+            <div class="card">
+                <h3><i class="fas fa-eye"></i> Preview Price Tags</h3>
+                <div class="pricetag-grid" id="pricetagContainer">
+                    <div v-for="(tag, idx) in generatedPricetags" :key="idx" 
+                         class="pricetag-preview" 
+                         :class="pricetagUkuran">
+                        <div class="tag-content">
+                            <!-- BODY: NAMA & HARGA (RATA KIRI) -->
+                            <div class="tag-body">
+                                <div class="nama">{{ tag.name }}</div>
+                                <div class="harga">Rp. {{ formatAngka(tag.price) }}<span class="satuan">/{{ tag.satuan || 'PCS' }}</span></div>
+                            </div>
+
+                            <!-- BARCODE VISUAL (FULL WIDTH) -->
+                            <div class="tag-barcode-wrap">
+                                <svg :id="'barcode-' + idx"></svg>
+                            </div>
+
+                            <!-- ANGKA BARCODE -->
+                            <div class="tag-barcode-angka">{{ tag.barcode }}</div>
+
+                            <!-- FOOTER: PLU (BIRU) | RETUR + TANGGAL (MERAH) -->
+                            <div class="tag-footer">
+                                <div class="line-blue">
+                                    <span>{{ tag.plu }}</span>
+                                    <span class="rak-text">{{ tag.rak }}</span>
+                                </div>
+                                <div class="gap-1"></div>
+                                <div class="line-red">
+                                    <span class="retur-text">{{ tag.retur }}</span>
+                                    <span class="tanggal-text">{{ tag.tanggal }}</span>
+                                </div>
+                                <div class="gap-2"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div v-if="generatedPricetags.length === 0" class="empty-state" style="grid-column:1/-1;">
+                        <i class="fas fa-tag" style="font-size:32px; color:#a0aec0;"></i>
+                        <p>Masukkan barcode dan klik Generate</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- EXPORT & PRINT -->
+            <div class="card">
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                    <button class="btn btn-success" style="flex:1;" @click="exportPricetagPDF" :disabled="generatedPricetags.length === 0">
+                        <i class="fas fa-file-pdf"></i> Export PDF
+                    </button>
+                    <button class="btn btn-primary" style="flex:1;" @click="printPricetags" :disabled="generatedPricetags.length === 0">
+                        <i class="fas fa-print"></i> Cetak Langsung
+                    </button>
+                    <button class="btn btn-danger" style="flex:1;" @click="clearGeneratedPricetags" :disabled="generatedPricetags.length === 0">
+                        <i class="fas fa-trash"></i> Hapus Semua
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
-                    <!-- EXPORT & PRINT -->
-                    <div class="card">
-                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                            <button class="btn btn-success" style="flex:1;" @click="exportPricetagPDF" :disabled="generatedPricetags.length === 0">
-                                <i class="fas fa-file-pdf"></i> Export PDF
-                            </button>
-                            <button class="btn btn-primary" style="flex:1;" @click="printPricetags" :disabled="generatedPricetags.length === 0">
-                                <i class="fas fa-print"></i> Cetak Langsung
-                            </button>
-                            <button class="btn btn-danger" style="flex:1;" @click="clearGeneratedPricetags" :disabled="generatedPricetags.length === 0">
-                                <i class="fas fa-trash"></i> Hapus Semua
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        
 
         <!-- ========== LAPORAN ========== -->
         <div class="tab-content" :class="{ active: activeTab === 'laporan' }">
