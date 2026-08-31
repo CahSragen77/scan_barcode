@@ -203,7 +203,7 @@
                 s += `Grand Total  : ${this.formatRupiah(this.grandTotalAfterDiscount)}\n`;
                 s += `Metode Bayar : ${this.paymentMethod}\n`;
                 s += '================================\n';
-                s += '   Terima kasih belanja!\n';
+                s += '   Terima kasih atas kunjungan Anda\n';
                 return s;
             }
         },
